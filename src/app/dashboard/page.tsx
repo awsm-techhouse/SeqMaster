@@ -3,9 +3,9 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import { PageContainer, Button, Badge } from '@/components/ui/LayoutPrimitives';
 import { supabase } from '@/lib/supabase';
-import { Terminal, Download, CreditCard, RefreshCw, Layers } from 'lucide-react';
+import { Terminal, Download, CreditCard, Layers, LogOut, Settings, KeyRound, X } from 'lucide-react';
 
-// FIX UTAMA: Perluasan tipe data global Window agar TypeScript mengenali objek Midtrans Snap
+// Perluasan deklarasi tipe data global Window agar TypeScript meloloskan objek Midtrans Snap
 declare global {
   interface Window {
     snap?: any;
@@ -19,6 +19,9 @@ export default function UserDashboard() {
   const [activeInvoices, setActiveInvoices] = useState<any[]>([]);
   const [downloadTargetId, setDownloadTargetId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // STATE BARU: PENGELOLA MODAL / PANEL SETTINGS VIEW
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadSecureProfileData();
@@ -43,24 +46,21 @@ export default function UserDashboard() {
       return;
     }
     setUserSession(session.user);
-
-    // 1. Ambil biner aset retail lunas
     const { data: retailData } = await supabase
       .from('orders')
       .select('*, products(title)')
-      .eq('customer_email', session.user.email)
+      .eq('customer_email', session.user.email || '') // FIX: Menggunakan operator fallback string aman
       .eq('status', 'settlement');
     if (retailData) setPurchasedItems(retailData);
 
-    // 2. Ambil pengajuan proyek dari tabel jasa_orders beserta array tagihannya
+    // 2. Ambil pengajuan proyek dari tabel jasa_orders (Menggunakan .ilike untuk kebal kapital)
     const { data: serviceData } = await supabase
       .from('jasa_orders')
       .select('*, jasa_invoices(*)')
-      .ilike('customer_email', `%${session.user.email}%`);
+      .ilike('customer_email', session.user.email || '');
     if (serviceData) {
       setCustomServices(serviceData);
       
-      // Filter & kumpulkan semua invoice termin berstatus 'pending' untuk ditarik ke panel khusus tagihan
       const pendingBills: any[] = [];
       serviceData.forEach(order => {
         if (order.jasa_invoices && Array.isArray(order.jasa_invoices)) {
@@ -74,6 +74,28 @@ export default function UserDashboard() {
       setActiveInvoices(pendingBills);
     }
   }
+
+  // PROTOKOL AKSI KELUAR AKUN (LOGOUT PROTOCOL)
+  const handleSecureSignOut = async () => {
+    if (!confirm('Apakah Anda yakin ingin memutuskan sesi dan keluar dari sistem?')) return;
+    await supabase.auth.signOut();
+    window.location.href = '/auth';
+  };
+
+  // PROTOKOL AKSI RESET PASSWORD MANDIRI VIA INBOX EMAIL
+  const handleTriggerResetPassword = async () => {
+    if (!userSession?.email) return;
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userSession.email, {
+        redirectTo: `${window.location.origin}/auth/reset-callback`,
+      });
+      if (error) throw error;
+      alert(`Tautan enkripsi pembaruan kata sandi sukses dikirimkan menuju: ${userSession.email}. Periksa folder kotak masuk atau spam Anda.`);
+      setShowSettings(false);
+    } catch (err: any) {
+      alert(`Gagal memicu reset password: ${err.message}`);
+    }
+  };
 
   const handleSecureVaultDownload = async (orderId: string) => {
     setDownloadTargetId(orderId);
@@ -116,10 +138,10 @@ export default function UserDashboard() {
   };
 
   return (
-    <PageContainer className="py-6 space-y-8 animate-in fade-in duration-300">
+    <PageContainer className="py-6 space-y-8 animate-in fade-in duration-300 relative">
       
-      {/* HEADER BAR PROFILE DASHBOARD */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/60 pb-5 text-left">
+      {/* HEADER CONTROLS BAR DASHBOARD PROFIL */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/60 pb-5 text-left relative z-20">
         <div>
           <h1 className="text-lg font-black tracking-tight uppercase text-zinc-100 flex items-center gap-2">
             <Terminal className="text-emerald-400" size={16} /> Musician Dashboard Node
@@ -128,10 +150,48 @@ export default function UserDashboard() {
             Welcome back, <span className="text-zinc-300 font-bold">{userSession?.email || 'Authenticated User'}</span>
           </p>
         </div>
-        <button onClick={loadSecureProfileData} className="bg-zinc-950 border border-zinc-900 hover:border-zinc-800 text-zinc-400 p-2.5 rounded-xl transition flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider">
-          <RefreshCw size={12} /> Sync Ledger
-        </button>
+        
+        {/* INTERFASE TOMBOL SISI KANAN BARU (SETTINGS & LOGOUT) */}
+        <div className="flex items-center gap-2">
+          {/* TOMBOL PENGATURAN / SETTINGS */}
+          <button 
+            onClick={() => setShowSettings(!showSettings)} 
+            className={`p-2.5 border rounded-xl transition flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider ${showSettings ? 'bg-zinc-100 text-zinc-950 border-zinc-100' : 'bg-zinc-950 border-zinc-900 hover:border-zinc-800 text-zinc-400 hover:text-zinc-200'}`}
+            title="Account Configuration"
+          >
+            <Settings size={12} className={showSettings ? 'animate-spin' : ''} style={{ animationDuration: '3s' }} /> Settings
+          </button>
+          
+          {/* TOMBOL KELUAR MANDIRI MANDATORI */}
+          <button 
+            onClick={handleSecureSignOut} 
+            className="bg-zinc-950 border border-zinc-900 hover:border-rose-950/40 text-zinc-500 hover:text-rose-400 p-2.5 rounded-xl transition flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider font-bold"
+          >
+            <LogOut size={12} /> Sign Out
+          </button>
+        </div>
       </div>
+
+      {/* DROPDOWN SUB-PANEL SETTINGS PREMIUM BOX LAYOUT (APPLE UX STYLE) */}
+      {showSettings && (
+        <div className="bg-zinc-950/90 border border-zinc-800 rounded-2xl p-4 max-w-sm ml-auto text-left space-y-3 shadow-2xl animate-in slide-in-from-top-2 duration-200 relative z-30 -mt-6">
+          <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Account Operations Node</span>
+            <button onClick={() => setShowSettings(false)} className="text-zinc-600 hover:text-zinc-400 transition"><X size={12} /></button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Memicu pengiriman instruksi pembaharuan kredensial sistem keamanan kata sandi baru menuju email utama Anda.
+            </p>
+            <button 
+              onClick={handleTriggerResetPassword}
+              className="w-full inline-flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 text-zinc-200 font-bold py-2 px-3 rounded-xl text-[10px] font-mono uppercase tracking-wider transition"
+            >
+              <KeyRound size={11} className="text-emerald-400" /> Request Password Reset
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* GRAP PANEL NOTIFIKASI INVOICE TERMIN AKTIF USER */}
       {activeInvoices.length > 0 && (
