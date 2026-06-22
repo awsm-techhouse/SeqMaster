@@ -71,7 +71,6 @@ export async function POST(request: Request) {
       // B. REGISTER ENGINE: Jalankan pembuatan akun otomatis via generateLink
       if (updatedOrder.requires_activation) {
         try {
-          // PERBAIKAN: Mengganti inviteUserByEmail dengan generateLink agar mengembalikan objek properties.action_link secara valid bagi TypeScript
           const { data: inviteData, error: authError } = await supabaseAdmin.auth.admin.generateLink({
             type: 'invite',
             email: updatedOrder.customer_email,
@@ -80,8 +79,7 @@ export async function POST(request: Request) {
                 full_name: updatedOrder.customer_name,
                 whatsapp: updatedOrder.whatsapp_number
               },
-              // Arahkan tujuan pengalihan ke dashboard website setelah aktivasi selesai
-              redirectTo: `${request.headers.get('origin') || 'https://seq-master.vercel.app'}/dashboard`
+              redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')}/dashboard`
             }
           });
 
@@ -94,8 +92,16 @@ export async function POST(request: Request) {
               .update({ user_id: inviteData.user.id })
               .eq('id', order_id);
               
-            // Menangkap tautan undangan resmi Supabase kustom untuk disatukan ke email Nodemailer
-            activationLink = inviteData.properties?.action_link || undefined;
+            let rawLink = inviteData.properties?.action_link;
+            if (rawLink) {
+              // LOCALHOST TRAP FIX: Jika Supabase mengembalikan link localhost, paksa ganti ke domain Vercel asli Anda
+              const productionDomain = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://seq-master.vercel.app';
+              if (rawLink.includes('http://localhost:3000')) {
+                activationLink = rawLink.replace('http://localhost:3000', productionDomain);
+              } else {
+                activationLink = rawLink;
+              }
+            }
           }
         } catch (authErr) {
           console.error("Automated auth user creation sequence failed:", authErr);
