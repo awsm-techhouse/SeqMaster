@@ -1,281 +1,232 @@
 'use client';
 
 import React, { useState, useEffect, useTransition } from 'react';
-import { PageContainer, Button, Badge } from '@/components/ui/LayoutPrimitives';
+import { PageContainer } from '@/components/ui/PageContainer';
+import Button from '@/components/ui/Button';
+import { 
+  Terminal, ShieldAlert, PlusCircle, LayoutGrid, AudioLines, 
+  Trash2, Edit3, UploadCloud, FileAudio, FileArchive, CheckCircle2,
+  ExternalLink, MessageSquare, Mail, RefreshCw, X
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { ShieldCheck, Layers, PlusCircle, CheckCircle, Save, LogOut, Lock, FileAudio, FileArchive, Trash2, Sliders, Pencil, XCircle } from 'lucide-react';
 
-export default function AdminControlConsole() {
+export default function AdminConsolePage() {
+  // PROTOKOL OTENTIKASI & SECURITY TIMEOUT 1 JAM
+  const [password, setPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeTab, setActiveTab] = useState<'add' | 'manage' | 'jasa'>('add');
   const [isPending, startTransition] = useTransition();
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState<string>('');
-  const [incomingJobs, setIncomingJobs] = useState<any[]>([]);
-  const [publishedProducts, setPublishedProducts] = useState<any[]>([]);
 
-  // ENGINE STATE UTK SISTEM UPDATE / EDIT (MANIFES TERPADU)
-  const [isEditingMode, setIsEditingMode] = useState<boolean>(false);
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
-
+  // STATE PRODUK SEQUENCER
+  const [products, setProducts] = useState<any[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
-  const [genreInput, setGenreInput] = useState('');
-  const [price, setPrice] = useState<number>(0);
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [bpmPulse, setBpmPulse] = useState<number>(128);
+  const [bpm, setBpm] = useState('');
+  const [genre, setGenre] = useState('');
+  const [price, setPrice] = useState('');
+  const [discount, setDiscount] = useState('0');
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [masterFileKey, setMasterFileKey] = useState('');
 
-  // Storage Upload Processing State
-  const [mp3PreviewUrl, setMp3PreviewUrl] = useState('');
-  const [mp3FileName, setMp3FileName] = useState('');
-  const [mp3Uploading, setMp3Uploading] = useState(false);
-  const [zipMasterKey, setZipMasterKey] = useState('');
-  const [zipFileName, setZipFileName] = useState('');
-  const [zipUploading, setZipUploading] = useState(false);
+  // STATE JASA ORDERS MANIFES
+  const [jasaOrders, setJasaOrders] = useState<any[]>([]);
 
-  // Dynamic Invoicing Allocation State per Job
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [allocatedPrice, setAllocatedPrice] = useState(0);
-  const [adminNotes, setAdminNotes] = useState('');
-  const [snapTokenInput, setSnapTokenInput] = useState('');
+  // TRACKING UTILLITAS UPLOAD LOG
+  const [uploadingPreview, setUploadingPreview] = useState(false);
+  const [uploadingMaster, setUploadingMaster] = useState(false);
 
-  // EVALUASI TIMEOUT FORCE LOGOUT 1 JAM
+  // VALIDASI HANDSHAKE KEAMANAN SESSION
   useEffect(() => {
-    const sessionExpiryTimestamp = localStorage.getItem('seqmaster_admin_expiry');
+    const authSession = localStorage.getItem('seq_admin_session');
+    const authExpiry = localStorage.getItem('seq_admin_expiry');
     
-    if (sessionExpiryTimestamp && Date.now() < parseInt(sessionExpiryTimestamp)) {
-      setIsAdminAuthenticated(true);
-      loadAllGlobalBriefs();
-      loadAllPublishedProducts();
-
-      const remainingLifetime = parseInt(sessionExpiryTimestamp) - Date.now();
-      const logoutTimer = setTimeout(() => {
-        executeAdminForceLogout();
-        alert('Sesi admin kedaluwarsa demi keamanan (Kunci otomatis 1 jam).');
-      }, remainingLifetime);
-
-      return () => clearTimeout(logoutTimer);
+    if (authSession === 'true' && authExpiry && Date.now() < Number(authExpiry)) {
+      setIsAuthenticated(true);
+      fetchRealTimeRecords();
     } else {
-      executeAdminForceLogout();
+      clearAdminSession();
     }
-  }, [isAdminAuthenticated]);
+  }, []);
 
-  const loadAllGlobalBriefs = async () => {
-    const { data } = await supabase.from('jasa_orders').select('*').order('created_at', { ascending: false });
-    if (data) setIncomingJobs(data);
+  const clearAdminSession = () => {
+    localStorage.removeItem('seq_admin_session');
+    localStorage.removeItem('seq_admin_expiry');
+    setIsAuthenticated(false);
   };
 
-  const loadAllPublishedProducts = async () => {
-    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (data) setPublishedProducts(data);
-  };
-
-  const handleAdminLoginSubmission = async (e: React.FormEvent) => {
+  const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: adminPasswordInput })
-      });
-      const data = await response.json();
-      
-      if (data.authenticated) {
-        const expiryTime = Date.now() + 3600000;
-        localStorage.setItem('seqmaster_admin_expiry', expiryTime.toString());
-        setIsAdminAuthenticated(true);
-      } else {
-        alert(data.error || 'Akses ditolak.');
-      }
-    } catch (err) {
-      alert('Koneksi pipa otentikasi admin terputus.');
+    if (password === '1234Ajasaru') {
+      localStorage.setItem('seq_admin_session', 'true');
+      localStorage.setItem('seq_admin_expiry', String(Date.now() + 3600000)); // Batas Kedaluwarsa 1 Jam
+      setIsAuthenticated(true);
+      fetchRealTimeRecords();
+    } else {
+      alert('Kunci Sandi Admin Salah. Sesi Akses Ditolak.');
     }
   };
 
-  const executeAdminForceLogout = () => {
-    localStorage.removeItem('seqmaster_admin_expiry');
-    setIsAdminAuthenticated(false);
-    setAdminPasswordInput('');
-    resetFormState();
+  // TARIK DATA RECORD DARI SUPABASE HUB
+  const fetchRealTimeRecords = async () => {
+    // A. Ambil Katalog Produk Sequencer
+    const { data: prodData } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+    if (prodData) setProducts(prodData);
+
+    // B. Ambil Seluruh Manifes Data Jasa Orders secara Utuh
+    const { data: serviceData } = await supabase.from('jasa_orders').select('*').order('created_at', { ascending: false });
+    if (serviceData) setJasaOrders(serviceData);
   };
 
-  const handleBinaryFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'preview' | 'master') => {
-    const targetFile = event.target.files?.[0];
+  // FORMAT OTOMATIS INPUT NOMINAL RUPIAH
+  const formatInputToRupiah = (value: string) => {
+    const cleanNumber = value.replace(/[^0-9]/g, '');
+    return cleanNumber ? Number(cleanNumber).toLocaleString('id-ID') : '';
+  };
+
+  // PIPELINE FILE UPLOAD HANDLER CLOUDFLARE R2 GATEWAY
+  const handleBinaryFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'preview' | 'master') => {
+    const targetFile = e.target.files?.[0];
     if (!targetFile) return;
 
-    if (type === 'preview') {
-      if (!targetFile.name.endsWith('.mp3')) {
-        return alert('Format berkas ditolak! Preview audio wajib berformat .mp3.');
-      }
-      setMp3Uploading(true);
-      setMp3FileName(targetFile.name);
-    } else {
-      if (!targetFile.name.endsWith('.zip')) {
-        return alert('Format berkas ditolak! Berkas master wajib berformat .zip.');
-      }
-      setZipUploading(true);
-      setZipFileName(targetFile.name);
-    }
+    if (type === 'preview') setUploadingPreview(true);
+    if (type === 'master') setUploadingMaster(true);
 
     try {
-      const uploadPayload = new FormData();
-      uploadPayload.append('file', targetFile);
-      uploadPayload.append('type', type);
+      const formData = new FormData();
+      formData.append('file', targetFile);
+      formData.append('type', type);
 
-      const response = await fetch('/api/admin/upload', { method: 'POST', body: uploadPayload });
-      const contentType = response.headers.get('content-type');
+      const response = await fetch('/api/admin/upload', { method: 'POST', body: formData });
       
+      const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const rawTextError = await response.text();
-        throw new Error(`Server Action Non-JSON: ${rawTextError.slice(0, 100)}`);
+        throw new Error(`Server Crash (Non-JSON): ${rawTextError.slice(0, 100)}`);
       }
 
       const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Gagal mengunggah berkas.');
 
-      if (result.success) {
-        if (type === 'preview') setMp3PreviewUrl(result.location);
-        else setZipMasterKey(result.objectKey);
+      if (type === 'preview') {
+        setPreviewUrl(result.objectKey); // Menyimpan Object Key Bersih
+        alert('Berkas Audio Preview .MP3 Berhasil Diamankan ke R2!');
       } else {
-        alert(result.error || 'Gagal memproses berkas.');
+        setMasterFileKey(result.objectKey); // Menyimpan Jalur Key Terproteksi
+        alert('Berkas Master Sequencer .ZIP Berhasil Dikunci ke R2!');
       }
     } catch (err: any) {
-      alert(err.message || 'Komunikasi cloud storage terputus.');
+      alert(`Upload Failed: ${err.message}`);
     } finally {
-      setMp3Uploading(false);
-      setZipUploading(false);
+      setUploadingPreview(false);
+      setUploadingMaster(false);
     }
   };
 
-  // LOGIKA UTUT SUBMIT FORMULIR (DUAL ACTION: INSERT ATAU UPDATE)
-  const handleFormSubmission = (e: React.FormEvent) => {
+  // COMMIT RELEASE DATA (CREATE / UPDATE MULTI-MODE ENGINE)
+  const handleCommitProductRelease = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mp3PreviewUrl || !zipMasterKey) return alert('Lengkapi unggahan berkas R2 terlebih dahulu.');
-
-    startTransition(async () => {
-      const formattedGenres = genreInput.split(',').map(g => g.trim()).filter(g => g.length > 0).join(', ');
-
-      const productPayload = {
-        title,
-        artist_name: artist,
-        bpm: Number(bpmPulse),
-        genre: formattedGenres,
-        price: Number(price),
-        discount_percent: Number(discountPercent),
-        preview_url: mp3PreviewUrl,
-        master_file_key: zipMasterKey,
-        is_active: true
-      };
-
-      if (isEditingMode && editingProductId) {
-        // JALUR UPDATE: Memperbarui record modifikasi data sekuenser utuh berdasarkan ID target
-        const { error } = await supabase
-          .from('products')
-          .update(productPayload)
-          .eq('id', editingProductId);
-
-        if (!error) {
-          alert('Sukses: Informasi perubahan data sekuenser berhasil disimpan ke basis data!');
-          resetFormState();
-          loadAllPublishedProducts();
-        } else {
-          alert(`Update Gagal: ${error.message}`);
-        }
-      } else {
-        // JALUR INSERT: Membuat baris produk ritme sekuenser baru
-        const generatedProductId = `SEQ-PROD-${Date.now()}`;
-        const { error } = await supabase
-          .from('products')
-          .insert([{ id: generatedProductId, ...productPayload }]);
-
-        if (!error) {
-          alert('Sukses mempublikasikan sekuenser baru!');
-          resetFormState();
-          loadAllPublishedProducts();
-        } else {
-          alert(`Insert Gagal: ${error.message}`);
-        }
-      }
-    });
-  };
-
-  // PEMICU EDIT: Memindahkan data dari list inventory masuk kembali ke dalam formulir input
-  const triggerEditProductFlow = (product: any) => {
-    setIsEditingMode(true);
-    setEditingProductId(product.id);
-    
-    setTitle(product.title || '');
-    setArtist(product.artist_name || '');
-    setBpmPulse(product.bpm || 128);
-    setGenreInput(product.genre || '');
-    setPrice(product.price || 0);
-    setDiscountPercent(product.discount_percent || 0);
-    setMp3PreviewUrl(product.preview_url || '');
-    setZipMasterKey(product.master_file_key || '');
-    
-    // Mengekstrak label teks nama berkas dari sisa string URL/Key objek R2
-    setMp3FileName(product.preview_url ? 'Preview-Audio-Loaded.mp3' : '');
-    setZipFileName(product.master_file_key ? 'Master-Package-Loaded.zip' : '');
-  };
-
-  const resetFormState = () => {
-    setIsEditingMode(false);
-    setEditingProductId(null);
-    setTitle(''); setArtist(''); setGenreInput(''); setPrice(0); setDiscountPercent(0); setBpmPulse(128);
-    setMp3PreviewUrl(''); setMp3FileName(''); setZipMasterKey(''); setZipFileName('');
-  };
-
-  const handleDeleteProductRecord = (productId: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus mutasi produk ini dari e-commerce secara permanen?')) return;
-    
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/admin/products/delete?id=${productId}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          alert(data.message);
-          if (editingProductId === productId) resetFormState();
-          loadAllPublishedProducts();
+        const numericPrice = Number(price.replace(/[^0-9]/g, ''));
+        const productPayload = {
+          title,
+          artist_name: artist,
+          bpm: Number(bpm),
+          genre: genre.split(',').map(g => g.trim()).filter(Boolean),
+          price: numericPrice,
+          discount_percent: Number(discount),
+          preview_url: previewUrl,
+          master_file_key: masterFileKey
+        };
+
+        if (editingId) {
+          // MODE EDIT: Lakukan Pembaruan Data
+          const { error } = await supabase.from('products').update(productPayload).eq('id', editingId);
+          if (error) throw error;
+          alert('Data Komponen Sequencer Sukses Diperbarui!');
         } else {
-          alert(data.error);
+          // MODE DAFTAR BARU: Masukkan Entri Baru
+          const { error } = await supabase.from('products').insert([productPayload]);
+          if (error) throw error;
+          alert('Modul Sequencer Baru Berhasil Dipublikasikan!');
         }
-      } catch (err) {
-        alert('Gagal menghapus produk.');
+
+        resetFormFields();
+        fetchRealTimeRecords();
+      } catch (err: any) {
+        alert(`Transaction Blocked: ${err.message}`);
       }
     });
   };
 
-  const handleUpdateInvoiceSpecs = (jobId: string) => {
-    startTransition(async () => {
-      const { error } = await supabase
-        .from('jasa_orders')
-        .update({ price: Number(allocatedPrice), admin_notes: adminNotes, payment_token: snapTokenInput })
-        .eq('id', jobId);
-
-      if (!error) {
-        alert('Struktur Invoice terperbarui!');
-        loadAllGlobalBriefs();
-        setSelectedJobId(null);
-      }
-    });
+  const handleTriggerEditMode = (prod: any) => {
+    setEditingId(prod.id);
+    setTitle(prod.title);
+    setArtist(prod.artist_name);
+    setBpm(String(prod.bpm));
+    setGenre(Array.isArray(prod.genre) ? prod.genre.join(', ') : prod.genre);
+    setPrice(Number(prod.price).toLocaleString('id-ID'));
+    setDiscount(String(prod.discount_percent || 0));
+    setPreviewUrl(prod.preview_url);
+    setMasterFileKey(prod.master_file_key);
+    setActiveTab('add'); // Alahkan visual ke form input
   };
 
-  const handleForceFinishJob = (jobId: string, payStatus: string) => {
-    if (payStatus !== 'settlement') return alert('Selesaikan termin transaksi pembayaran pembeli terlebih dahulu.');
-    startTransition(async () => {
-      const { error } = await supabase.from('jasa_orders').update({ status: 'finished' }).eq('id', jobId);
-      if (!error) loadAllGlobalBriefs();
-    });
+  const handleRemoveProductRecord = async (productId: string) => {
+    if (!confirm('Apakah Anda yakin ingin memusnahkan produk sekuenser ini dari katalog?')) return;
+    const { error } = await supabase.from('products').delete().eq('id', productId);
+    if (error) alert(error.message);
+    else {
+      alert('Aset sekuenser berhasil dihapus dari database.');
+      fetchRealTimeRecords();
+    }
   };
 
-  if (!isAdminAuthenticated) {
+  const handleFinishJasaOrder = async (orderId: string) => {
+    if (!confirm('Tandai status pengerjaan proyek kustom ini selesai?')) return;
+    const { error } = await supabase.from('jasa_orders').update({ status: 'finished' }).eq('id', orderId);
+    if (error) alert(error.message);
+    else {
+      alert('Status proyek diperbarui menjadi Finished.');
+      fetchRealTimeRecords();
+    }
+  };
+
+  const resetFormFields = () => {
+    setEditingId(null);
+    setTitle('');
+    setArtist('');
+    setBpm('');
+    setGenre('');
+    setPrice('');
+    setDiscount('0');
+    setPreviewUrl('');
+    setMasterFileKey('');
+  };
+
+  // SHIELD SCREEN OVERLAY JIKA BELUM TEROTENTIKASI
+  if (!isAuthenticated) {
     return (
-      <PageContainer className="flex items-center justify-center min-h-screen">
-        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-8 max-w-sm w-full shadow-2xl space-y-6">
-          <div className="text-center">
-            <Lock className="mx-auto text-rose-400 mb-2" size={18} />
-            <h2 className="text-xs font-black tracking-tight uppercase text-zinc-100">Console Security Boundary</h2>
+      <PageContainer className="flex items-center justify-center min-h-[85vh]">
+        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-3xl p-8 max-w-sm w-full text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+            <ShieldAlert className="text-rose-400" size={20} />
           </div>
-          <form onSubmit={handleAdminLoginSubmission} className="space-y-4">
-            <input type="password" required placeholder="Enter Admin Password" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 text-center tracking-widest focus:border-rose-500 focus:outline-none" value={adminPasswordInput} onChange={(e) => setAdminPasswordInput(e.target.value)} />
-            <Button type="submit">Verify Token</Button>
+          <div>
+            <h2 className="text-sm font-black tracking-tight uppercase text-zinc-100">Administrative Gate</h2>
+            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">Protected Cyber Terminal</p>
+          </div>
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <input 
+              type="password" 
+              required 
+              placeholder="ENTER TERMINAL KEY" 
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-100 text-center font-mono focus:border-rose-500 focus:outline-none transition tracking-widest"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button type="submit" className="!bg-zinc-100 !text-zinc-950 hover:!bg-zinc-200 text-xs font-black uppercase tracking-wider">Access Terminal</Button>
           </form>
         </div>
       </PageContainer>
@@ -283,170 +234,335 @@ export default function AdminControlConsole() {
   }
 
   return (
-    <PageContainer className="space-y-12">
-      <header className="border-b border-zinc-900 pb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-black tracking-tight uppercase text-zinc-100 flex items-center gap-2">
-            <ShieldCheck size={16} className="text-rose-500" /> Control Tower Admin Central
+    <PageContainer className="py-6 space-y-8 animate-in fade-in duration-300">
+      
+      {/* PANEL UTAMA: SINKRONISASI TRI-PANEL NAVIGATION SWITCH BOARD */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/60 pb-5">
+        <div className="text-left">
+          <h1 className="text-lg font-black tracking-tight uppercase text-zinc-100 flex items-center gap-2">
+            <Terminal className="text-emerald-400" size={16} /> Command Console Central
           </h1>
+          <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">Cluster System Node Operational Hub</p>
         </div>
-        <Button variant="secondary" onClick={executeAdminForceLogout} className="!w-24 !py-1.5 text-[10px]">Logout</Button>
-      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* PANEL FORMULIR INPUT TERSTRUKTUR (KOLOM KIRI - BISA BERUBAH WARNA SAAT EDIT MODE) */}
-        <div className={`backdrop-blur-md border rounded-2xl p-6 shadow-xl space-y-4 transition-colors duration-300 lg:col-span-5 ${isEditingMode ? 'bg-amber-500/5 border-amber-500/30' : 'bg-zinc-900/40 border-zinc-800/60'}`}>
-          <h2 className="text-xs font-black tracking-tight uppercase text-zinc-300 flex items-center gap-1.5">
-            <PlusCircle size={14} className={isEditingMode ? 'text-amber-400' : 'text-emerald-400'} /> 
-            {isEditingMode ? 'Modify Sequencer Asset' : 'Inject New Sequencer'}
-          </h2>
-          
-          <form onSubmit={handleFormSubmission} className="space-y-4 text-xs">
-            <div>
-              <label className="block text-[10px] text-zinc-500 uppercase font-mono tracking-wider mb-1">Judul Lagu / Track Title</label>
-              <input type="text" required placeholder="Contoh: Sequencer Pop Rock Track A" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 focus:border-emerald-500 focus:outline-none transition" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <div className="flex items-center gap-2 bg-zinc-950/60 p-1.5 border border-zinc-900 rounded-2xl">
+          <button 
+            onClick={() => { setActiveTab('add'); if(!editingId) resetFormFields(); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'add' ? (editingId ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-zinc-100 text-zinc-950') : 'text-zinc-400 hover:text-zinc-200'}`}
+          >
+            <PlusCircle size={14} /> {editingId ? 'Edit Mode' : 'Inject Sequencer'}
+          </button>
+          <button 
+            onClick={() => setActiveTab('manage')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'manage' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}
+          >
+            <LayoutGrid size={14} /> Manage Sequencer
+          </button>
+          <button 
+            onClick={() => setActiveTab('jasa')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition relative ${activeTab === 'jasa' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}
+          >
+            <AudioLines size={14} /> Jasa Order
+            {jasaOrders.filter(o => o.status === 'pending').length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-amber-500 text-zinc-950 font-mono text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse">
+                {jasaOrders.filter(o => o.status === 'pending').length}
+              </span>
+            )}
+          </button>
+          <button onClick={fetchRealTimeRecords} className="p-2 text-zinc-500 hover:text-zinc-200 transition rounded-xl" title="Refresh Live Data">
+            <RefreshCw size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* VIEW PANEL 1: INJECT NEW SEQUENCER / FORMULIR PEMBARUAN */}
+      {activeTab === 'add' && (
+        <div className={`bg-zinc-900/40 backdrop-blur-md border ${editingId ? 'border-amber-500/30' : 'border-zinc-800/60'} rounded-3xl p-8 max-w-3xl mx-auto shadow-xl space-y-6`}>
+          <div className="flex justify-between items-start border-b border-zinc-900 pb-4">
+            <div className="text-left">
+              <h2 className={`text-sm font-black uppercase tracking-wide ${editingId ? 'text-amber-400' : 'text-zinc-200'}`}>
+                {editingId ? '📝 Edit Existing Sequencer Payload' : '⚡ Inject New Digital Sequencer Object'}
+              </h2>
+              <p className="text-[10px] font-mono text-zinc-500 uppercase mt-0.5">Fill the metadata ledger matrix nodes</p>
+            </div>
+            {editingId && (
+              <button onClick={resetFormFields} className="text-zinc-500 hover:text-zinc-200 p-1 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center gap-1 text-[10px] font-mono uppercase px-2 py-1">
+                <X size={10} /> Cancel Edit
+              </button>
+            )}
+          </div>
+
+          <form onSubmit={handleCommitProductRelease} className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left text-xs">
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Judul Sequencer</label>
+              <input type="text" required placeholder="CONTOH: SYNTHWAVE HORIZON TRACK" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 focus:border-emerald-500 focus:outline-none transition font-medium uppercase" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] text-zinc-500 uppercase font-mono tracking-wider mb-1">Nama Artis</label>
-                <input type="text" required placeholder="Contoh: Alex Vance" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 focus:border-emerald-500 focus:outline-none transition" value={artist} onChange={(e) => setArtist(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-[10px] text-zinc-500 uppercase font-mono tracking-wider mb-1">Tempo Kecepatan</label>
-                <input type="number" required placeholder="128 BPM" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 focus:border-emerald-500 focus:outline-none transition" value={bpmPulse} onChange={(e) => setBpmPulse(Number(e.target.value))} />
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Nama Artis / Producer</label>
+              <input type="text" required placeholder="CONTOH: TECHHOUSE LABS" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 focus:border-emerald-500 focus:outline-none transition font-medium uppercase" value={artist} onChange={(e) => setArtist(e.target.value)} />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Ketukan Tempo (BPM)</label>
+              <input type="number" required placeholder="CONTOH: 128" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 font-mono focus:border-emerald-500 focus:outline-none transition" value={bpm} onChange={(e) => setBpm(e.target.value)} />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Genre (Pisah Dengan Koma)</label>
+              <input type="text" required placeholder="CONTOH: ROCK, CYBERPUNK, EDM" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 focus:border-emerald-500 focus:outline-none transition font-medium uppercase" value={genre} onChange={(e) => setGenre(e.target.value)} />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Harga Utama (IDR)</label>
+              <input type="text" required placeholder="CONTOH: 250.000" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-emerald-400 font-mono font-bold focus:border-emerald-500 focus:outline-none transition" value={price} onChange={(e) => setPrice(formatInputToRupiah(e.target.value))} />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Diskon Potongan Harga (Persen %)</label>
+              <input type="number" min="0" max="100" required placeholder="0" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 font-mono focus:border-emerald-500 focus:outline-none transition" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+            </div>
+
+            {/* INTEGRASI COMPONENT UPLOAD DRAG-DROP AUDIO MP3 */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Upload File MP3 (Preview 20 Detik)</label>
+              <div className="relative bg-zinc-950 border-2 border-dashed border-zinc-800 hover:border-zinc-700 rounded-xl p-4 flex flex-center flex-col justify-center items-center text-center transition min-h-[90px] group">
+                <input type="file" accept="audio/mpeg" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleBinaryFileUpload(e, 'preview')} />
+                {uploadingPreview ? (
+                  <p className="text-[10px] font-mono text-zinc-400 animate-pulse uppercase flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> Uploading to Cloudflare R2 Node...</p>
+                ) : previewUrl ? (
+                  <p className="text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 font-bold"><CheckCircle2 size={12} /> COMPONENT LOCKED // {previewUrl.split('/').pop()?.slice(0, 20)}...</p>
+                ) : (
+                  <>
+                    <UploadCloud size={16} className="text-zinc-600 group-hover:text-zinc-400 mb-1.5" />
+                    <p className="text-[10px] text-zinc-500 font-sans">Seret berkas atau klik area untuk input .MP3</p>
+                  </>
+                )}
               </div>
             </div>
 
-            <div>
-              <label className="block text-[10px] text-zinc-500 uppercase font-mono tracking-wider mb-1">Genre Klasifikasi (Dipisah Koma)</label>
-              <input type="text" required placeholder="Contoh: Synthwave, Cyberpunk, Electro" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 focus:border-emerald-500 focus:outline-none transition" value={genreInput} onChange={(e) => setGenreInput(e.target.value)} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] text-zinc-500 uppercase font-mono tracking-wider mb-1">Harga Base (Rupiah)</label>
-                <input type="number" required placeholder="Rp 450000" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 font-mono text-emerald-400 focus:border-emerald-500 focus:outline-none transition" value={price || ''} onChange={(e) => setPrice(Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="block text-[10px] text-zinc-500 uppercase font-mono tracking-wider mb-1">Potongan Diskon (%)</label>
-                <input type="number" min="0" max="100" required placeholder="0%" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 font-mono text-rose-400 focus:border-emerald-500 focus:outline-none transition" value={discountPercent} onChange={(e) => setDiscountPercent(Number(e.target.value))} />
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-1">
-              <span className="block text-[9px] text-zinc-500 uppercase font-mono tracking-wider">Cloud Storage Nodes (Upload Ulang Jika Ingin Mengganti Berkas)</span>
-              <div className="relative border border-dashed border-zinc-800 rounded-xl p-3 bg-zinc-950/40 text-center hover:border-emerald-500/50 transition">
-                <input type="file" accept=".mp3" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleBinaryFileUpload(e, 'preview')} />
-                <p className="text-[10px] text-zinc-400 flex items-center justify-center gap-1.5">
-                  <FileAudio size={12} className={mp3PreviewUrl ? 'text-emerald-400' : 'text-zinc-600'} />
-                  {mp3Uploading ? 'Uploading Preview...' : mp3FileName ? `Preview: ${mp3FileName}` : 'Drop Audio Preview (.MP3)'}
-                </p>
-              </div>
-              <div className="relative border border-dashed border-zinc-800 rounded-xl p-3 bg-zinc-950/40 text-center hover:border-emerald-500/50 transition">
+            {/* INTEGRASI COMPONENT UPLOAD MASTER ZIP */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Upload File ZIP (Master Trek Penuh)</label>
+              <div className="relative bg-zinc-950 border-2 border-dashed border-zinc-800 hover:border-zinc-700 rounded-xl p-4 flex flex-center flex-col justify-center items-center text-center transition min-h-[90px] group">
                 <input type="file" accept=".zip" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleBinaryFileUpload(e, 'master')} />
-                <p className="text-[10px] text-zinc-400 flex items-center justify-center gap-1.5">
-                  <FileArchive size={12} className={zipMasterKey ? 'text-cyan-400' : 'text-zinc-600'} />
-                  {zipUploading ? 'Uploading Package...' : zipFileName ? `Package: ${zipFileName}` : 'Drop Master Code (.ZIP)'}
-                </p>
+                {uploadingMaster ? (
+                  <p className="text-[10px] font-mono text-zinc-400 animate-pulse uppercase flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> Locking into Security Vault...</p>
+                ) : masterFileKey ? (
+                  <p className="text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 font-bold"><CheckCircle2 size={12} /> MASTER SECURE VAULT LOCKED // {masterFileKey.split('/').pop()?.slice(0, 20)}...</p>
+                ) : (
+                  <>
+                    <UploadCloud size={16} className="text-zinc-600 group-hover:text-zinc-400 mb-1.5" />
+                    <p className="text-[10px] text-zinc-500 font-sans">Seret berkas atau klik area untuk input .ZIP</p>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={isPending || mp3Uploading || zipUploading} className={isEditingMode ? '!bg-amber-400 !text-zinc-950 hover:!bg-amber-500' : ''}>
-                {isPending ? 'Processing Storage Matrix...' : isEditingMode ? 'Save Matrix Modifications' : 'Publish New Sequencer Node'}
+            <div className="md:col-span-2 pt-3">
+              <Button 
+                type="submit" 
+                disabled={isPending || uploadingPreview || uploadingMaster} 
+                className={`w-full text-xs font-black uppercase py-4 tracking-widest ${editingId ? '!bg-amber-500 !text-zinc-950 hover:!bg-amber-400 shadow-amber-500/10' : '!bg-zinc-100 !text-zinc-950 hover:!bg-zinc-200'}`}
+              >
+                {isPending ? 'Syncing System ledger Node...' : editingId ? 'Commit Node Update Changes' : 'Commit Secure Node Release'}
               </Button>
-              {isEditingMode && (
-                <button type="button" onClick={resetFormState} className="px-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-xl transition flex items-center justify-center" title="Cancel Modification">
-                  <XCircle size={14} />
-                </button>
-              )}
             </div>
           </form>
         </div>
+      )}
 
-        {/* WORKFLOW TRACKER JASA & DATA MANAGEMENT LIST INVENTORY (KOLOM KANAN) */}
-        <div className="lg:col-span-7 space-y-6">
-          
-          {/* SUB-PANEL UTUH MANAGEMENT LIST: SEKARANG MEMILIKI TOMBOL EDIT SINKRON */}
-          <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 shadow-xl">
-            <h2 className="text-xs font-black tracking-tight uppercase text-zinc-300 flex items-center gap-1 mb-4">
-              <Sliders size={12} className="text-emerald-400" /> Active Storefront Catalog Inventory
-            </h2>
-            <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
-              {publishedProducts.length === 0 ? (
-                <p className="text-xs text-zinc-600 font-mono py-2">Belum ada sekuenser terbit di database.</p>
-              ) : (
-                publishedProducts.map(p => (
-                  <div key={p.id} className={`p-3 border rounded-xl flex justify-between items-center font-mono text-[11px] transition-colors ${editingProductId === p.id ? 'bg-amber-500/5 border-amber-500/30' : 'bg-zinc-950 border-zinc-900'}`}>
-                    <div className="truncate max-w-[65%]">
-                      <h4 className="font-bold text-zinc-300 truncate font-sans uppercase text-xs">{p.title}</h4>
-                      <span className="text-[9px] text-zinc-500 font-mono block mt-0.5">IDR {Number(p.price).toLocaleString('id-ID')} // Disc {p.discount_percent}% // {p.bpm} BPM</span>
-                    </div>
-                    <div className="flex gap-2">
-                      {/* TOMBOL EDIT MODIFIKASI DATA (Sesuai Permintaan) */}
-                      <button 
-                        type="button" 
-                        onClick={() => triggerEditProductFlow(p)} 
-                        className="p-2 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 rounded-xl transition"
-                        title="Edit Modul Sequencer"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={() => handleDeleteProductRecord(p.id)} 
-                        className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition"
-                        title="Delete Permanen"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+      {/* VIEW PANEL 2: MANAGE SEQUENCER (LIST, EDIT, REMOVE CONTROL) */}
+      {activeTab === 'manage' && (
+        <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-3xl p-6 shadow-xl space-y-4">
+          <div className="text-left border-b border-zinc-950 pb-3">
+            <h2 className="text-sm font-black uppercase text-zinc-200">Catalog Records Tracker</h2>
+            <p className="text-[10px] font-mono text-zinc-500 uppercase mt-0.5">Operational active catalog inventory system data rows</p>
           </div>
 
-          {/* PRODUCTION SERVICE MATRIX */}
-          <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 shadow-xl">
-            <h2 className="text-xs font-black tracking-tight uppercase text-zinc-300 flex items-center gap-1 mb-4">
-              <Layers size={12} /> Production Service Matrix (jasa_orders)
-            </h2>
-            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
-              {incomingJobs.map((job) => (
-                <div key={job.id} className="p-4 bg-zinc-950 border border-zinc-900 rounded-xl flex flex-col space-y-3 font-mono text-xs">
-                  <div className="flex justify-between border-b border-zinc-900 pb-2 flex-wrap gap-2">
+          {products.length === 0 ? (
+            <p className="text-zinc-500 text-xs font-mono py-8 select-none">NO DATA ACTIVE MODULES DISCOVERED INSIDE CORE INVENTORY.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-zinc-300 font-sans border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-900 text-zinc-500 font-mono text-[10px] uppercase tracking-wider bg-zinc-950/20">
+                    <th className="py-3 px-4">Metadata Node</th>
+                    <th className="py-3 px-4">Artis / Producer</th>
+                    <th className="py-3 px-4">Genre / BPM</th>
+                    <th className="py-3 px-4">Financial Grid</th>
+                    <th className="py-3 px-4 text-center">Operational Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900">
+                  {products.map((prod) => (
+                    <tr key={prod.id} className="hover:bg-zinc-900/20 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-zinc-100 uppercase tracking-wide">
+                        {prod.title}
+                        <span className="block text-[9px] font-mono text-zinc-600 uppercase font-normal select-all mt-0.5">HASH: {prod.id}</span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-zinc-400 uppercase tracking-wide">{prod.artist_name}</td>
+                      <td className="py-3.5 px-4 space-y-1">
+                        <span className="text-zinc-300 font-mono text-[11px] block">{prod.bpm} BPM</span>
+                        <div className="flex flex-wrap gap-1">
+                          {Array.isArray(prod.genre) ? prod.genre.map((g: string, i: number) => (
+                            <span key={i} className="bg-zinc-950 border border-zinc-900 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold text-zinc-500 uppercase">{g}</span>
+                          )) : null}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono">
+                        {prod.discount_percent > 0 ? (
+                          <div className="space-y-0.5">
+                            <span className="text-zinc-600 line-through text-[11px] block">IDR {Number(prod.price).toLocaleString('id-ID')}</span>
+                            <span className="text-emerald-400 font-bold text-xs block">IDR {Number(prod.price * (1 - prod.discount_percent / 100)).toLocaleString('id-ID')} <span className="bg-emerald-500/10 text-emerald-400 text-[9px] px-1 py-0.2 rounded font-black border border-emerald-500/20 ml-1">-{prod.discount_percent}%</span></span>
+                          </div>
+                        ) : (
+                          <span className="text-zinc-300 font-bold block">IDR {Number(prod.price).toLocaleString('id-ID')}</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => handleTriggerEditMode(prod)} 
+                            className="bg-zinc-950 border border-zinc-800 hover:border-amber-500/40 text-zinc-400 hover:text-amber-400 p-2 rounded-xl transition"
+                            title="Edit Module Parameters"
+                          >
+                            <Edit3 size={12} />
+                          </button>
+                          <button 
+                            onClick={() => handleRemoveProductRecord(prod.id)} 
+                            className="bg-zinc-950 border border-zinc-800 hover:border-rose-500/40 text-zinc-400 hover:text-rose-400 p-2 rounded-xl transition"
+                            title="Terminate Module Record"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW PANEL 3: JASA ORDER REQUESTS MANIFES BARU UTUH (DIPISAH PENUH) */}
+      {activeTab === 'jasa' && (
+        <div className="space-y-4">
+          <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-3xl p-6 shadow-xl text-left">
+            <h2 className="text-sm font-black uppercase text-zinc-200">Custom Services Ledger Pipeline</h2>
+            <p className="text-[10px] font-mono text-zinc-500 uppercase mt-0.5">Advanced audio engineering and customization requests manager</p>
+          </div>
+
+          {jasaOrders.length === 0 ? (
+            <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-3xl p-8 text-center">
+              <p className="text-zinc-500 text-xs font-mono py-4 select-none">NO CUSTOM AUDIO PROJECT BRIEF SUBMISSIONS REGISTERED YET.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left text-xs">
+              {jasaOrders.map((order) => (
+                <div 
+                  key={order.id} 
+                  className={`bg-zinc-900/40 backdrop-blur-md border ${order.status === 'pending' ? 'border-amber-500/20 bg-gradient-to-br from-zinc-900/40 to-amber-500/[0.01]' : 'border-zinc-800/60'} rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-5 animate-in fade-in duration-200`}
+                >
+                  
+                  {/* TOP CARD BAR METADATA */}
+                  <div className="flex justify-between items-start border-b border-zinc-950 pb-3">
                     <div>
-                      <h3 className="font-black text-zinc-200 font-sans uppercase text-xs">{job.project_title}</h3>
-                      <p className="text-[9px] text-zinc-500">WA: {job.whatsapp_number} // Cat: {job.category}</p>
+                      <span className="bg-zinc-950 border border-zinc-900 px-2 py-0.5 rounded text-[9px] font-mono font-black text-emerald-400 uppercase tracking-widest block w-max mb-1.5">{order.service_type || 'Custom Service'}</span>
+                      <h3 className="text-sm font-black uppercase tracking-wide text-zinc-100 select-all">{order.notes?.split('\n')?.[0]?.replace('Judul Projek: ', '') || 'Untitled Project'}</h3>
+                      <span className="block text-[10px] font-mono text-zinc-600 mt-0.5">ID: {order.id}</span>
                     </div>
-                    <div className="flex gap-1.5 text-[9px]"><Badge type={job.status} /><Badge type={job.payment_status} /></div>
+                    <span className={`px-2 py-0.5 font-mono text-[9px] font-black rounded border uppercase tracking-wider ${order.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse' : 'bg-zinc-800/40 text-zinc-400 border-zinc-800/60'}`}>
+                      {order.status}
+                    </span>
                   </div>
-                  {selectedJobId === job.id ? (
-                    <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg space-y-2 mt-2 font-sans">
-                      <input type="number" placeholder="Set Price (IDR)" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-100" value={allocatedPrice} onChange={(e) => setAllocatedPrice(Number(e.target.value))} />
-                      <input type="text" placeholder="Midtrans Snap Token" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-100" value={snapTokenInput} onChange={(e) => setSnapTokenInput(e.target.value)} />
-                      <input type="text" placeholder="Internal Notes" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-100" value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} />
-                      <div className="flex gap-2"><Button variant="primary" onClick={() => handleUpdateInvoiceSpecs(job.id)} className="!py-1.5 text-[10px]">Save</Button><Button variant="ghost" onClick={() => setSelectedJobId(null)} className="!py-1.5 text-[10px]">Cancel</Button></div>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between items-center text-[11px] pt-1">
-                      <span className="text-zinc-400">Price: IDR {Number(job.price).toLocaleString('id-ID')}</span>
-                      <div className="flex gap-2">
-                        <Button variant="secondary" onClick={() => { setSelectedJobId(job.id); setAllocatedPrice(job.price); setAdminNotes(job.admin_notes || ''); setSnapTokenInput(job.payment_token || ''); }} className="!py-1 !px-2 text-[9px] !w-24">Invoice Specs</Button>
-                        {job.status === 'pending' && <Button variant="primary" onClick={() => handleForceFinishJob(job.id, job.payment_status)} className="!py-1 !px-2 text-[9px] !w-16">Finish</Button>}
+
+                  {/* CORE DATA LEDGER: MENAMPILKAN SEMUA DATA MANIFES PROYEK SECARA UTUH */}
+                  <div className="space-y-3 font-sans leading-relaxed">
+                    
+                    {/* HUB KONTAK KLIEN */}
+                    <div className="grid grid-cols-2 gap-3 bg-zinc-950/60 p-3 border border-zinc-900/80 rounded-2xl font-mono text-[11px] text-zinc-400">
+                      <div>
+                        <span className="block text-[9px] text-zinc-600 font-mono uppercase tracking-wider mb-0.5">NAMA MUSISI / KLIEN</span>
+                        <span className="text-zinc-200 font-bold uppercase">{order.customer_name}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] text-zinc-600 font-mono uppercase tracking-wider mb-0.5">WHATSAPP LINK BRIDGE</span>
+                        <a href={`https://wa.me/${order.whatsapp_number?.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 font-bold underline flex items-center gap-1 hover:text-emerald-300">
+                          <MessageSquare size={10} /> {order.whatsapp_number}
+                        </a>
+                      </div>
+                      <div className="col-span-2 border-t border-zinc-900 pt-2 mt-1">
+                        <span className="block text-[9px] text-zinc-600 font-mono uppercase tracking-wider mb-0.5">EMAIL ADRESS PATH</span>
+                        <span className="text-zinc-300 select-all flex items-center gap-1"><Mail size={10} className="text-zinc-600" /> {order.customer_email}</span>
                       </div>
                     </div>
+
+                    {/* MANIFES CATATAN LINK & FILE DRIVE KLIEN */}
+                    <div className="space-y-2.5 pt-1">
+                      <div>
+                        <span className="block text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1">🎵 Musik Referensi Link (Spotify/YouTube):</span>
+                        {order.notes?.match(/Referensi Link: (.+)/)?.[1] ? (
+                          <a 
+                            href={order.notes.match(/Referensi Link: (.+)/)[1].trim()} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center gap-1.5 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-xl font-mono text-[11px] text-zinc-300 transition-all max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
+                          >
+                            Buka Referensi Musik <ExternalLink size={10} className="text-zinc-500" />
+                          </a>
+                        ) : (
+                          <span className="text-zinc-600 italic font-mono text-[11px] block pl-1">No reference links supplied by customer node.</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="block text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1">📦 Berkas Mentah / Multi-Track Drive Link:</span>
+                        {order.notes?.match(/Drive Berkas: (.+)/)?.[1] ? (
+                          <a 
+                            href={order.notes.match(/Drive Berkas: (.+)/)[1].trim()} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 px-3 py-1.5 rounded-xl font-mono text-[11px] text-emerald-400 font-bold transition-all max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
+                          >
+                            Unduh Stems / Audio Mentah <ExternalLink size={10} className="text-emerald-500" />
+                          </a>
+                        ) : (
+                          <span className="text-zinc-600 italic font-mono text-[11px] block pl-1">No drive storage paths found inside this brief folder.</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="block text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1">📝 Catatan Khusus Untuk Produser:</span>
+                        <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3.5 text-zinc-300 font-sans text-xs leading-relaxed max-h-[120px] overflow-y-auto whitespace-pre-wrap shadow-inner">
+                          {order.notes?.split('\n\n---')?.[0]?.replace(/Judul Projek: .+\n?/, '') || 'Tidak ada instruksi sound design tambahan.'}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* BOTTOM ACTION BAR JASA */}
+                  {order.status === 'pending' && (
+                    <div className="pt-3 border-t border-zinc-950">
+                      <button 
+                        onClick={() => handleFinishJasaOrder(order.id)}
+                        className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-black py-3 rounded-xl text-[10px] uppercase tracking-widest transition active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-xl shadow-black/40"
+                      >
+                        <CheckCircle2 size={12} /> Tandai Projek Selesai (Finish)
+                      </button>
+                    </div>
                   )}
+
                 </div>
               ))}
             </div>
-          </div>
-
+          )}
         </div>
-      </div>
+      )}
+
     </PageContainer>
   );
 }
