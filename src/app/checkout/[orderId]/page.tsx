@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 async function getOrderRecordState(orderId: string) {
   const { data } = await supabase
     .from('orders')
-    .select('*, products(title)')
+    .select('*, products(title)') 
     .eq('id', orderId)
     .single();
   return data;

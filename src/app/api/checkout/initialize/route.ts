@@ -14,7 +14,14 @@ export async function POST(request: Request) {
     const { product_id, customer_name, customer_email, whatsapp_number, amount, user_id } = await request.json();
     const uniqueOrderId = `SEQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // DETEKSI EMAIL NYATA: Cek apakah email sudah pernah bertransaksi sukses di database
+    // 1. Jalankan pembuatan token transaksi ke server Midtrans terlebih dahulu
+    const parameter = {
+      transaction_details: { order_id: uniqueOrderId, gross_amount: amount },
+      customer_details: { first_name: customer_name, email: customer_email, phone: whatsapp_number }
+    };
+    const transaction = await snap.createTransaction(parameter);
+
+    // 2. Deteksi status keaktifan email konsumen
     const { data: existingUserOrder } = await supabase
       .from('orders')
       .select('id')
@@ -22,10 +29,9 @@ export async function POST(request: Request) {
       .eq('status', 'settlement')
       .limit(1);
 
-    // Jika tidak ada riwayat transaksi sukses, tandai bahwa pengguna ini wajib melakukan aktivasi akun
     const isNewCustomerNode = !existingUserOrder || existingUserOrder.length === 0;
 
-    // Catat transaksi baru ke tabel internal 'orders' lengkap dengan flag status aktivasi
+    // 3. INJEKSI PERBAIKAN: Masukkan transaction.token langsung ke kolom payment_token Supabase
     const { error: dbError } = await supabase
       .from('orders')
       .insert([{
@@ -38,17 +44,12 @@ export async function POST(request: Request) {
         total_amount: amount,
         status: 'pending',
         type: 'retail',
-        requires_activation: isNewCustomerNode
+        requires_activation: isNewCustomerNode,
+        payment_token: transaction.token // Mengunci token secara permanen di database server
       }]);
 
     if (dbError) throw dbError;
 
-    const parameter = {
-      transaction_details: { order_id: uniqueOrderId, gross_amount: amount },
-      customer_details: { first_name: customer_name, email: customer_email, phone: whatsapp_number }
-    };
-
-    const transaction = await snap.createTransaction(parameter);
     return NextResponse.json({ token: transaction.token, orderId: uniqueOrderId });
   } catch (error: any) {
     console.error('Checkout initialization failed:', error);
