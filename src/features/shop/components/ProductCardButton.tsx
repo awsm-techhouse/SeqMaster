@@ -35,7 +35,7 @@ export default function ProductCardButton({ product }: ProductCardButtonProps) {
         className="!py-2 border-zinc-800/80 hover:border-zinc-700"
       >
         {currentIsPlaying ? <Pause size={14} className="text-rose-400" /> : <Play size={14} className="text-emerald-400" />}
-        <span className="text-[10px] tracking-wider">{currentIsPlaying ? 'Play Preview' : 'Stop Preview'}</span>
+        <span className="text-[10px] tracking-wider">{currentIsPlaying ? 'Stop Preview' : 'Play Preview'}</span>
       </Button>
 
       {/* DIUBAH: Mengalihkan aksi tombol langsung untuk membuka halaman detail shareable */}
