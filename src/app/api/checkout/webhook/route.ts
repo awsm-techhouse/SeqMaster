@@ -1,59 +1,50 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import nodemailer from 'nodemailer';
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASS }
-});
 
 export async function POST(request: Request) {
   try {
-    const notificationJson = await request.json();
-    const orderId = notificationJson.order_id;
-    const transactionStatus = notificationJson.transaction_status;
-
-    let targetStatus = 'pending';
-    if (transactionStatus === 'settlement' || transactionStatus === 'capture') {
-      targetStatus = 'settlement';
-    } else if (['deny', 'expire', 'cancel'].includes(transactionStatus)) {
-      targetStatus = 'failed';
+    // 1. Ambil teks mentah body untuk mengantisipasi ping handshake kosong dari Midtrans Dashboard
+    const rawBodyText = await request.text();
+    
+    if (!rawBodyText || rawBodyText.trim() === "") {
+      console.log("Midtrans Diagnostic URL Verification Handshake Triggered.");
+      // Kembalikan status HTTP 200 OK dengan format JSON murni agar dasbor Midtrans mendeteksinya sukses
+      return NextResponse.json({ 
+        status: "verified", 
+        message: "SeqMaster Webhook Endpoint is active and operational." 
+      }, { status: 200 });
     }
 
-    if (targetStatus === 'settlement') {
-      if (orderId.startsWith('JASA-')) {
-        const { data: jasaData, error: jasaError } = await supabase
-          .from('jasa_orders')
-          .update({ payment_status: 'settlement' })
-          .eq('id', orderId.replace('JASA-', ''))
-          .select()
-          .single();
-          
-        if (jasaError) throw jasaError;
-      } else {
-        const { data: orderData, error: updateError } = await supabase
-          .from('orders')
-          .update({ status: 'settlement' })
-          .eq('id', orderId)
-          .select()
-          .single();
+    // 2. Jika payload terisi data transaksi asli, konversikan ke objek JSON
+    const body = JSON.parse(rawBodyText);
+    const { order_id, transaction_status, fraud_status } = body;
 
-        if (updateError) throw updateError;
+    if (!order_id) {
+      return NextResponse.json({ error: 'Missing order_id parameter node' }, { status: 400 });
+    }
 
-        const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`;
-        await transporter.sendMail({
-          from: process.env.GMAIL_USER,
-          to: orderData.customer_email,
-          subject: '📦 Berkas Master Sequencer Anda Siap Diunduh!',
-          html: `<p>Halo ${orderData.customer_name},</p>
-                 <p>Terima kasih, pembayaran berhasil diverifikasi. Silakan masuk ke dashboard akun untuk mengunduh produk digital Anda:</p>
-                 <a href="${dashboardUrl}">${dashboardUrl}</a>`
-        });
+    // Tentukan status sinkronisasi final sesuai dengan realitas transaksi ledger
+    let finalDatabaseStatus = 'pending';
+    if (transaction_status === 'settlement' || transaction_status === 'capture') {
+      if (fraud_status === 'accept' || !fraud_status) {
+        finalDatabaseStatus = 'settlement'; // Sinkronisasi status resmi Midtrans
       }
+    } else if (['cancel', 'deny', 'expire'].includes(transaction_status)) {
+      finalDatabaseStatus = 'failed';
     }
 
-    return NextResponse.json({ status: 'Synchronized' });
+    // 3. Mutasi status baris data pada tabel tunggal 'orders' Supabase
+    const { error: dbError } = await supabase
+      .from('orders')
+      .update({ status: finalDatabaseStatus })
+      .eq('id', order_id);
+
+    if (dbError) throw dbError;
+
+    return NextResponse.json({ success: true, status: finalDatabaseStatus });
+
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Critical failure inside webhook handler pipeline:', error);
+    return NextResponse.json({ error: error.message || 'Internal Hook Exception' }, { status: 500 });
   }
 }
