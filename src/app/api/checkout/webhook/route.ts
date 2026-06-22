@@ -5,7 +5,6 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2Client, BUCKET_NAME } from '@/lib/r2';
 import { sendTransactionalReceiptEmail } from '@/lib/email';
 
-// INISIALISASI ADMINISTRATOR CLIENT BYPASSING GERBANG RLS
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -15,7 +14,6 @@ export async function POST(request: Request) {
   try {
     const rawBodyText = await request.text();
     
-    // Handshake validation untuk dasbor verifikasi Midtrans URL
     if (!rawBodyText || rawBodyText.trim() === "") {
       return NextResponse.json({ status: "verified" }, { status: 200 });
     }
@@ -27,7 +25,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing identifier order_id' }, { status: 400 });
     }
 
-    // Tentukan status klaring berdasarkan kiriman Midtrans ledger
     let isSettled = false;
     let finalDatabaseStatus = 'pending';
 
@@ -40,7 +37,6 @@ export async function POST(request: Request) {
       finalDatabaseStatus = 'failed';
     }
 
-    // 1. Jalankan mutasi pembaharuan status baris transaksi di tabel orders Supabase
     const { data: updatedOrder, error: dbError } = await supabaseAdmin
       .from('orders')
       .update({ status: finalDatabaseStatus })
@@ -50,12 +46,10 @@ export async function POST(request: Request) {
 
     if (dbError) throw dbError;
 
-    // 2. ORKESTRASI PIPELINE ASINKRON EMAIL & REGISTRASI JIKA STATUS ADALAH SETTLEMENT (LUNAS)
     if (isSettled && updatedOrder) {
       let secureDownloadUrl = '#';
       let activationLink: string | undefined = undefined;
 
-      // A. Amankan pembuatan tautan unduh biner ZIP R2 hangus 48 jam untuk dimasukkan ke email
       if (updatedOrder.products?.master_file_key) {
         try {
           const downloadCommand = new GetObjectCommand({
@@ -68,47 +62,53 @@ export async function POST(request: Request) {
         }
       }
 
-      // B. REGISTER ENGINE: Jalankan pembuatan akun otomatis via generateLink
+      // ISOLASI MUTLAK: Menggunakan try-catch khusus agar error pendaftaran tidak membatalkan pengiriman email download
       if (updatedOrder.requires_activation) {
         try {
-          const { data: inviteData, error: authError } = await supabaseAdmin.auth.admin.generateLink({
-            type: 'invite',
-            email: updatedOrder.customer_email,
-            options: {
-              data: { 
-                full_name: updatedOrder.customer_name,
-                whatsapp: updatedOrder.whatsapp_number
-              },
-              redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')}/dashboard`
-            }
-          });
+          // Kroscek apakah email ini sebenarnya sudah terdaftar di auth.users untuk menghindari collision error
+          const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+          const existingAuthUser = userList?.users.find(
+            u => u.email?.toLowerCase() === updatedOrder.customer_email.toLowerCase()
+          );
 
-          if (authError) throw authError;
+          if (!existingAuthUser) {
+            const { data: inviteData, error: authError } = await supabaseAdmin.auth.admin.generateLink({
+              type: 'invite',
+              email: updatedOrder.customer_email,
+              options: {
+                data: { 
+                  full_name: updatedOrder.customer_name,
+                  whatsapp: updatedOrder.whatsapp_number
+                },
+                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')}/dashboard`
+              }
+            });
 
-          if (inviteData?.user?.id) {
-            // Relasikan baris order dengan user_id yang baru saja terbentuk demi keutuhan data
-            await supabaseAdmin
-              .from('orders')
-              .update({ user_id: inviteData.user.id })
-              .eq('id', order_id);
+            if (!authError && inviteData) {
+              if (inviteData.user?.id) {
+                await supabaseAdmin
+                  .from('orders')
+                  .update({ user_id: inviteData.user.id })
+                  .eq('id', order_id);
+              }
               
-            let rawLink = inviteData.properties?.action_link;
-            if (rawLink) {
-              // LOCALHOST TRAP FIX: Jika Supabase mengembalikan link localhost, paksa ganti ke domain Vercel asli Anda
-              const productionDomain = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://seq-master.vercel.app';
-              if (rawLink.includes('http://localhost:3000')) {
-                activationLink = rawLink.replace('http://localhost:3000', productionDomain);
-              } else {
-                activationLink = rawLink;
+              let rawLink = inviteData.properties?.action_link;
+              if (rawLink) {
+                const productionDomain = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://seq-master.vercel.app';
+                activationLink = rawLink.includes('http://localhost:3000')
+                  ? rawLink.replace('http://localhost:3000', productionDomain)
+                  : rawLink;
               }
             }
+          } else {
+            console.log("User email node already present inside Auth record matrix, skipping invite generation.");
           }
         } catch (authErr) {
-          console.error("Automated auth user creation sequence failed:", authErr);
+          console.error("Automated isolated auth registration section encountered a failure:", authErr);
         }
       }
 
-      // C. BLAST ENGINE: Kirim berkas gabungan nota + download link R2 + link aktivasi ke email konsumen
+      // AKSI BLAST: Email ini sekarang DIJAMIN akan selalu terkirim membawa tautan unduhan Cloudflare R2 apa pun yang terjadi pada status pendaftaran!
       await sendTransactionalReceiptEmail({
         customerName: updatedOrder.customer_name,
         customerEmail: updatedOrder.customer_email,

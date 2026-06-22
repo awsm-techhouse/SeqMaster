@@ -3,56 +3,164 @@
 import React, { useState } from 'react';
 import { PageContainer, Button } from '@/components/ui/LayoutPrimitives';
 import { supabase } from '@/lib/supabase';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, User, Mail, Phone, EyeOff } from 'lucide-react';
 
 export default function AuthPortalPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoginView, setIsLoginView] = useState(true);
   const [loading, setLoading] = useState(false);
+  
+  // MANIFES INPUT STATE KLIEN
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
 
   const executeAuthAction = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (isLoginView) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert(error.message);
-      else window.location.href = '/dashboard';
-    } else {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) alert(error.message);
-      else alert('Registrasi Terbuka! Periksa tautan masuk di kotak surel Anda.');
+    try {
+      if (isLoginView) {
+        // ALUR MASUK (SIGN IN): Langsung lewat Supabase Client Auth
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        
+        window.location.href = '/dashboard';
+      } else {
+        // ALUR DAFTAR (REGISTER): DIUBAH total ke API Handler untuk bypass limit & localhost trap
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name, whatsapp })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Gagal mengeksekusi pipeline pendaftaran.');
+        }
+
+        alert('Registrasi Berhasil! Pipa SMTP Gmail aman. Silakan buka kotak masuk atau spam email Anda untuk mengklik tautan aktivasi akun.');
+        setIsLoginView(true); // Kembalikan ke halaman login setelah sukses daftar
+      }
+    } catch (err: any) {
+      alert(`Otentikasi Gagal: ${err.message || err}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handlePasswordRecovery = async () => {
     if (!email) return alert('Input email akun Anda terlebih dahulu pada kolom.');
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-callback`,
     });
+    
     if (error) alert(error.message);
-    else alert('Tautan pemulihan enkripsi telah dikirim ke alamat email.');
+    else alert('Tautan pemulihan enkripsi aman telah dikirim ke alamat email Gmail Anda.');
   };
 
   return (
-    <PageContainer className="flex items-center justify-center min-h-screen">
-      <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-8 max-w-sm w-full shadow-2xl space-y-6">
-        <div className="text-center">
-          <KeyRound className="mx-auto text-emerald-400 mb-2" size={18} />
-          <h2 className="text-xs font-black tracking-tight uppercase text-zinc-100">{isLoginView ? 'Login Account' : 'Register Account'}</h2>
+    <PageContainer className="flex items-center justify-center min-h-[85vh]">
+      {/* Container Kaca Gelap Mewah Simetris (Apple Dark Luxury Style) */}
+      <div className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
+        
+        <div className="text-center select-none">
+          <div className="mx-auto w-10 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-3 border border-emerald-500/20">
+            <KeyRound className="text-emerald-400" size={18} />
+          </div>
+          <h2 className="text-sm font-black tracking-tight uppercase text-zinc-100">
+            {isLoginView ? 'Login Portal Node' : 'Create Network Node'}
+          </h2>
+          <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-1">
+            {isLoginView ? 'Authorize Security Session' : 'Register Secure Account'}
+          </p>
         </div>
 
-        <form onSubmit={executeAuthAction} className="space-y-4">
-          <input type="email" required placeholder="Email" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 focus:border-emerald-500" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input type="password" required placeholder="Password" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 focus:border-emerald-500" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <Button type="submit" disabled={loading}>{loading ? 'Verifying...' : isLoginView ? 'Sign In' : 'Register'}</Button>
+        <form onSubmit={executeAuthAction} className="space-y-4 text-xs">
+          
+          {/* TAMPILKAN KOLOM NAME HANYA JIKA MODE REGISTER ACTIVE */}
+          {!isLoginView && (
+            <div className="relative animate-in slide-in-from-top-2 duration-200">
+              <User size={12} className="absolute left-4 top-3.5 text-zinc-600" />
+              <input 
+                type="text" 
+                required 
+                placeholder="NAMA LENGKAP" 
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none transition tracking-wide" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+              />
+            </div>
+          )}
+
+          {/* KOLOM EMAIL */}
+          <div className="relative">
+            <Mail size={12} className="absolute left-4 top-3.5 text-zinc-600" />
+            <input 
+              type="email" 
+              required 
+              placeholder="ALAMAT@EMAIL.COM" 
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-100 font-mono focus:border-emerald-500 focus:outline-none transition tracking-wide" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+            />
+          </div>
+
+          {/* TAMPILKAN KOLOM WHATSAPP HANYA JIKA MODE REGISTER ACTIVE */}
+          {!isLoginView && (
+            <div className="relative animate-in slide-in-from-top-2 duration-200">
+              <Phone size={12} className="absolute left-4 top-3.5 text-zinc-600" />
+              <input 
+                type="tel" 
+                required 
+                placeholder="NOMOR WHATSAPP (0851xxx)" 
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-100 font-mono focus:border-emerald-500 focus:outline-none transition tracking-widest" 
+                value={whatsapp} 
+                onChange={(e) => setWhatsapp(e.target.value)} 
+              />
+            </div>
+          )}
+
+          {/* KOLOM PASSWORD */}
+          <div className="relative">
+            <EyeOff size={12} className="absolute left-4 top-3.5 text-zinc-600" />
+            <input 
+              type="password" 
+              required 
+              placeholder="KATA SANDI" 
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-100 focus:border-emerald-500 focus:outline-none transition tracking-widest" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+            />
+          </div>
+
+          <div className="pt-2">
+            <Button type="submit" disabled={loading} className="!py-3 text-[10px] tracking-widest font-black uppercase">
+              {loading ? 'Processing Protocol...' : isLoginView ? 'Sign In Node' : 'Initialize Node'}
+            </Button>
+          </div>
         </form>
 
-        <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500 pt-4 border-t border-zinc-900">
-          <button type="button" onClick={() => setIsLoginView(!isLoginView)} className="hover:text-zinc-100 uppercase transition">{isLoginView ? 'Register Account' : 'Return to Login'}</button>
-          {isLoginView && <button type="button" onClick={handlePasswordRecovery} className="hover:text-rose-400 uppercase transition">Forgot Password?</button>}
+        {/* NAVIGASI SWITCH BOTTOM TOGGLE */}
+        <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500 pt-4 border-t border-zinc-900 select-none">
+          <button 
+            type="button" 
+            onClick={() => setIsLoginView(!isLoginView)} 
+            className="hover:text-zinc-100 uppercase transition tracking-wider"
+          >
+            {isLoginView ? '// Create Account' : '// Return to Login'}
+          </button>
+          {isLoginView && (
+            <button 
+              type="button" 
+              onClick={handlePasswordRecovery} 
+              className="hover:text-rose-400 uppercase transition tracking-wider"
+            >
+              Forgot Password?
+            </button>
+          )}
         </div>
       </div>
     </PageContainer>
