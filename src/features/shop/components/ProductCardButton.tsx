@@ -34,7 +34,7 @@ export default function ProductCardButton({ product, onBuyClick }: ProductCardBu
         className="!py-2 border-zinc-800/80 hover:border-zinc-700"
       >
         {currentIsPlaying ? <Pause size={14} className="text-rose-400" /> : <Play size={14} className="text-emerald-400" />}
-        <span className="text-[10px] tracking-wider">{currentIsPlaying ? 'Halt Audio' : 'Audition Grid'}</span>
+        <span className="text-[10px] tracking-wider">{currentIsPlaying ? 'Stop Preview' : 'Play Preview'}</span>
       </Button>
 
       {/* Menjalankan callback fungsi yang dikirim dari level atas */}

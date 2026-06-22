@@ -30,7 +30,7 @@ export default async function ShopCatalogPage() {
       <header className="mb-10 border-b border-zinc-900 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight uppercase text-zinc-100 flex items-center gap-2 select-none">
-            <Sliders size={20} className="text-emerald-500" /> Digital Matrix Store
+            <Sliders size={20} className="text-emerald-500" /> Sequencer Store Catalog
           </h1>
           <p className="text-[10px] text-zinc-500 font-mono mt-1 uppercase tracking-widest">
             High-Density Architectural Patches & Sequences

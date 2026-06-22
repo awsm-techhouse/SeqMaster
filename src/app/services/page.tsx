@@ -116,7 +116,7 @@ export default function ServicesPage() {
           <Headphones size={20} className="text-cyan-400" /> Advanced Audio Engineering
         </h1>
         <p className="text-[10px] text-zinc-500 font-mono mt-1 uppercase tracking-widest">
-          Premium Consultation & Production Pipeline
+          Premium Consultation & Production Services for Musicians and Producers
         </p>
       </header>
 
@@ -162,10 +162,10 @@ export default function ServicesPage() {
           </div>
 
           <div className="text-[11px] text-zinc-400 space-y-2.5 border-t border-zinc-900 pt-4 font-normal">
-            <p className="font-bold text-zinc-300 uppercase tracking-wide text-[10px]">Acoustic Quality Compliance:</p>
-            <div className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-400" /> Analisis Spektrogram Linear Phase</div>
-            <div className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-400" /> Penataan Saturation Tabung Analog 24-bit</div>
-            <div className="flex items-center gap-2"><CheckCircle2 size={12} className="text-cyan-400" /> Kustomisasi Kerapatan Langkah MIDI Pattern</div>
+            <p className="font-bold text-zinc-300 uppercase tracking-wide text-[10px]">SeqMaster Services:</p>
+            <div className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-400" /> Mixing & Mastering</div>
+            <div className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-400" /> Music Production</div>
+            <div className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-400" /> Custom Sequencer</div>
           </div>
         </div>
 
