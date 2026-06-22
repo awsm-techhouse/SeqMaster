@@ -5,7 +5,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2Client, BUCKET_NAME } from '@/lib/r2';
 import { sendTransactionalReceiptEmail } from '@/lib/email';
 
-// INITIALIZE ADMINISTRATIVE CLIENT BYPASSING RLS RESTRICTIONS
+// INISIALISASI ADMINISTRATOR CLIENT BYPASSING GERBANG RLS
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -68,21 +68,22 @@ export async function POST(request: Request) {
         }
       }
 
-      // B. REGISTER ENGINE: Jalankan pembuatan akun otomatis via Supabase Auth Admin API jika user baru
+      // B. REGISTER ENGINE: Jalankan pembuatan akun otomatis via generateLink
       if (updatedOrder.requires_activation) {
         try {
-          // Buat undangan / invite pengguna asinkron memanfaatkan Auth Service Role
-          const { data: inviteData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-            updatedOrder.customer_email,
-            {
+          // PERBAIKAN: Mengganti inviteUserByEmail dengan generateLink agar mengembalikan objek properties.action_link secara valid bagi TypeScript
+          const { data: inviteData, error: authError } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'invite',
+            email: updatedOrder.customer_email,
+            options: {
               data: { 
                 full_name: updatedOrder.customer_name,
                 whatsapp: updatedOrder.whatsapp_number
               },
-              // Arahkan tujuan pengalihan ke dashboard website Anda setelah aktivasi diklik
+              // Arahkan tujuan pengalihan ke dashboard website setelah aktivasi selesai
               redirectTo: `${request.headers.get('origin') || 'https://seq-master.vercel.app'}/dashboard`
             }
-          );
+          });
 
           if (authError) throw authError;
 
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
               .update({ user_id: inviteData.user.id })
               .eq('id', order_id);
               
-            // Tangkap tautan undangan resmi Supabase kustom untuk disatukan ke email Nodemailer
+            // Menangkap tautan undangan resmi Supabase kustom untuk disatukan ke email Nodemailer
             activationLink = inviteData.properties?.action_link || undefined;
           }
         } catch (authErr) {
