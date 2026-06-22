@@ -14,14 +14,14 @@ export async function POST(request: Request) {
     const { product_id, customer_name, customer_email, whatsapp_number, amount, user_id } = await request.json();
     const uniqueOrderId = `SEQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // 1. Dapatkan Token Snap langsung dari Server Midtrans terlebih dahulu
+    // 1. Inisialisasi token transaksi ke Midtrans Server
     const parameter = {
       transaction_details: { order_id: uniqueOrderId, gross_amount: amount },
       customer_details: { first_name: customer_name, email: customer_email, phone: whatsapp_number }
     };
     const transaction = await snap.createTransaction(parameter);
 
-    // 2. Periksa apakah email pembeli sudah terdaftar dalam riwayat settlement sukses
+    // 2. Deteksi status email pelanggan lama/baru
     const { data: existingUserOrder } = await supabase
       .from('orders')
       .select('id')
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     const isNewCustomerNode = !existingUserOrder || existingUserOrder.length === 0;
 
-    // 3. Masukkan record utuh ke Supabase, simpan token ke kolom payment_token
+    // 3. Simpan record order ke database beserta token snap-nya
     const { error: dbError } = await supabase
       .from('orders')
       .insert([{
@@ -45,14 +45,14 @@ export async function POST(request: Request) {
         status: 'pending',
         type: 'retail',
         requires_activation: isNewCustomerNode,
-        payment_token: transaction.token // KUNCI UTAMA: Disimpan permanen untuk fallback refresh
+        payment_token: transaction.token // Token disimpan aman di DB
       }]);
 
     if (dbError) throw dbError;
 
     return NextResponse.json({ token: transaction.token, orderId: uniqueOrderId });
   } catch (error: any) {
-    console.error('Checkout initialization failure:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Checkout internal handler error:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
