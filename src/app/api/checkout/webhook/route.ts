@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       finalDatabaseStatus = 'failed';
     }
 
+    // 1. Mutasi status transaksi di database
     const { data: updatedOrder, error: dbError } = await supabaseAdmin
       .from('orders')
       .update({ status: finalDatabaseStatus })
@@ -46,9 +47,9 @@ export async function POST(request: Request) {
 
     if (dbError) throw dbError;
 
+    // 2. Kirim Link Download & Nota ke Email Pembeli
     if (isSettled && updatedOrder) {
       let secureDownloadUrl = '#';
-      let activationLink: string | undefined = undefined;
 
       if (updatedOrder.products?.master_file_key) {
         try {
@@ -62,53 +63,9 @@ export async function POST(request: Request) {
         }
       }
 
-      // ISOLASI MUTLAK: Menggunakan try-catch khusus agar error pendaftaran tidak membatalkan pengiriman email download
-      if (updatedOrder.requires_activation) {
-        try {
-          // Kroscek apakah email ini sebenarnya sudah terdaftar di auth.users untuk menghindari collision error
-          const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-          const existingAuthUser = userList?.users.find(
-            u => u.email?.toLowerCase() === updatedOrder.customer_email.toLowerCase()
-          );
+      // Tautan pendaftaran manual untuk disisipkan ke email pengingat
+      const registerFallbackLink = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')}/auth`;
 
-          if (!existingAuthUser) {
-            const { data: inviteData, error: authError } = await supabaseAdmin.auth.admin.generateLink({
-              type: 'invite',
-              email: updatedOrder.customer_email,
-              options: {
-                data: { 
-                  full_name: updatedOrder.customer_name,
-                  whatsapp: updatedOrder.whatsapp_number
-                },
-                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')}/dashboard`
-              }
-            });
-
-            if (!authError && inviteData) {
-              if (inviteData.user?.id) {
-                await supabaseAdmin
-                  .from('orders')
-                  .update({ user_id: inviteData.user.id })
-                  .eq('id', order_id);
-              }
-              
-              let rawLink = inviteData.properties?.action_link;
-              if (rawLink) {
-                const productionDomain = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://seq-master.vercel.app';
-                activationLink = rawLink.includes('http://localhost:3000')
-                  ? rawLink.replace('http://localhost:3000', productionDomain)
-                  : rawLink;
-              }
-            }
-          } else {
-            console.log("User email node already present inside Auth record matrix, skipping invite generation.");
-          }
-        } catch (authErr) {
-          console.error("Automated isolated auth registration section encountered a failure:", authErr);
-        }
-      }
-
-      // AKSI BLAST: Email ini sekarang DIJAMIN akan selalu terkirim membawa tautan unduhan Cloudflare R2 apa pun yang terjadi pada status pendaftaran!
       await sendTransactionalReceiptEmail({
         customerName: updatedOrder.customer_name,
         customerEmail: updatedOrder.customer_email,
@@ -116,7 +73,7 @@ export async function POST(request: Request) {
         productTitle: updatedOrder.products?.title || 'Premium Sequencer Patch',
         totalAmount: updatedOrder.total_amount,
         downloadUrl: secureDownloadUrl,
-        activationUrl: activationLink
+        activationUrl: updatedOrder.requires_activation ? registerFallbackLink : undefined
       });
     }
 
