@@ -28,11 +28,12 @@ export default function CheckoutModal({ product, onClose }: { product: any; onCl
         const data = await res.json();
         
         if (data.orderId) {
-          // DIUBAH: Langsung lempar user ke checkout page membawa parameter token pembayaran
-          window.location.href = `/checkout/${data.orderId}?token=${data.token}`;
+          // Navigasi instan ke halaman checkout murni
+          window.location.href = `/checkout/${data.orderId}`;
         }
       } catch (err) {
-        console.error('Payment bridge connection down:', err);
+        console.error(err);
+        alert('Koneksi pipa checkout terputus.');
       } finally {
         onClose();
       }
@@ -51,22 +52,22 @@ export default function CheckoutModal({ product, onClose }: { product: any; onCl
         </div>
 
         <h3 className="text-base font-black tracking-tight uppercase text-zinc-100 mb-1 select-none">Secure Terminal Checkout</h3>
-        <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-6">{product.title} // Matrix Asset Node</p>
+        <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-6">{product.title}</p>
 
         <form onSubmit={handleCheckoutInit} className="space-y-5 text-sm">
           <div>
             <label className="block text-[11px] text-zinc-400 uppercase font-mono tracking-widest mb-1.5 text-center">Name</label>
-            <input type="text" required placeholder="NAMA LENGKAP ANDA" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-3.5 text-sm text-zinc-100 text-center placeholder:text-center focus:border-emerald-500 focus:outline-none transition font-medium tracking-wide shadow-inner" value={name} onChange={(e) => setName(e.target.value)} />
+            <input type="text" required placeholder="NAMA LENGKAP ANDA" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-3.5 text-sm text-zinc-100 text-center placeholder:text-center focus:border-emerald-500 focus:outline-none transition shadow-inner" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
 
           <div>
             <label className="block text-[11px] text-zinc-400 uppercase font-mono tracking-widest mb-1.5 text-center">Email</label>
-            <input type="email" required placeholder="ALAMAT@EMAIL.COM" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-3.5 text-sm text-zinc-100 text-center placeholder:text-center focus:border-emerald-500 focus:outline-none transition font-mono tracking-wide shadow-inner" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="email" required placeholder="ALAMAT@EMAIL.COM" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-3.5 text-sm text-zinc-100 text-center placeholder:text-center focus:border-emerald-500 focus:outline-none transition shadow-inner" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
 
           <div>
             <label className="block text-[11px] text-zinc-400 uppercase font-mono tracking-widest mb-1.5 text-center">Whatsapp</label>
-            <input type="tel" required placeholder="0851XXXXXXXX" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-3.5 text-sm text-zinc-100 text-center placeholder:text-center focus:border-emerald-500 focus:outline-none transition font-mono tracking-widest shadow-inner" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+            <input type="tel" required placeholder="0851XXXXXXXX" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-5 py-3.5 text-sm text-zinc-100 text-center placeholder:text-center focus:border-emerald-500 focus:outline-none transition shadow-inner" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
           </div>
 
           <div className="pt-4">

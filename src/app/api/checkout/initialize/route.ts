@@ -14,14 +14,14 @@ export async function POST(request: Request) {
     const { product_id, customer_name, customer_email, whatsapp_number, amount, user_id } = await request.json();
     const uniqueOrderId = `SEQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // 1. Jalankan pembuatan token transaksi ke server Midtrans terlebih dahulu
+    // 1. Dapatkan Token Snap langsung dari Server Midtrans terlebih dahulu
     const parameter = {
       transaction_details: { order_id: uniqueOrderId, gross_amount: amount },
       customer_details: { first_name: customer_name, email: customer_email, phone: whatsapp_number }
     };
     const transaction = await snap.createTransaction(parameter);
 
-    // 2. Deteksi status keaktifan email konsumen
+    // 2. Periksa apakah email pembeli sudah terdaftar dalam riwayat settlement sukses
     const { data: existingUserOrder } = await supabase
       .from('orders')
       .select('id')
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     const isNewCustomerNode = !existingUserOrder || existingUserOrder.length === 0;
 
-    // 3. INJEKSI PERBAIKAN: Masukkan transaction.token langsung ke kolom payment_token Supabase
+    // 3. Masukkan record utuh ke Supabase, simpan token ke kolom payment_token
     const { error: dbError } = await supabase
       .from('orders')
       .insert([{
@@ -45,14 +45,14 @@ export async function POST(request: Request) {
         status: 'pending',
         type: 'retail',
         requires_activation: isNewCustomerNode,
-        payment_token: transaction.token // Mengunci token secara permanen di database server
+        payment_token: transaction.token // KUNCI UTAMA: Disimpan permanen untuk fallback refresh
       }]);
 
     if (dbError) throw dbError;
 
     return NextResponse.json({ token: transaction.token, orderId: uniqueOrderId });
   } catch (error: any) {
-    console.error('Checkout initialization failed:', error);
+    console.error('Checkout initialization failure:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
