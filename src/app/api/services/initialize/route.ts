@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { sendAdminServiceAlertEmail } from '@/lib/email'; // Impor fungsi notifikasi kustom dari email.ts
 
 export async function POST(request: Request) {
   try {
-    const { user_id, project_title, category, reference_url, stems_url, notes, customer_name, customer_email, whatsapp_number } = await request.json();
+    const { 
+      user_id, 
+      project_title, 
+      category, 
+      reference_url, 
+      stems_url, 
+      notes, 
+      customer_name, 
+      customer_email, 
+      whatsapp_number 
+    } = await request.json();
 
+    // 1. Simpan manifes proyek jasa ke tabel internal database Supabase secara aman
     const { data, error } = await supabase
       .from('jasa_orders')
       .insert([{
@@ -26,8 +38,24 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
+    // 2. SINKRONISASI EMAIL: Otomatis kirim alarm notifikasi ke awsm.techhouse@gmail.com pasca-insert sukses
+    if (data) {
+      await sendAdminServiceAlertEmail({
+        orderId: data.id,
+        customerName: customer_name,
+        customerEmail: customer_email,
+        whatsappNumber: whatsapp_number,
+        serviceType: category,
+        projectTitle: project_title,
+        referenceLink: reference_url || '',
+        driveLink: stems_url || '',
+        projectNotes: notes || ''
+      });
+    }
+
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Service order pipeline collapsed:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
