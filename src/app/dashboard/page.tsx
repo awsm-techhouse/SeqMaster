@@ -56,7 +56,7 @@ export default function UserDashboard() {
     const { data: serviceData } = await supabase
       .from('jasa_orders')
       .select('*, jasa_invoices(*)')
-      .eq('customer_email', session.user.email);
+      .ilike('customer_email', `%${session.user.email}%`);
     if (serviceData) {
       setCustomServices(serviceData);
       
