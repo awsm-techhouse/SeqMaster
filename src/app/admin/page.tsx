@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition } from 'react';
-import { PageContainer } from '@/components/ui/PageContainer';
+import PageContainer from '@/components/ui/PageContainer';
 import Button from '@/components/ui/Button';
 import { 
   Terminal, ShieldAlert, PlusCircle, LayoutGrid, AudioLines, 
