@@ -87,12 +87,18 @@ export async function sendTransactionalReceiptEmail(payload: EmailPayload): Prom
 export async function sendAdminServiceAlertEmail(payload: ServiceAlertPayload): Promise<void> {
   const { orderId, customerName, customerEmail, whatsappNumber, serviceType, projectTitle, referenceLink, driveLink, projectNotes } = payload;
   
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASS },
-  });
+  try {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASS) {
+      console.error('❌ Email config missing: GMAIL_USER or GMAIL_APP_PASS environment variables are not set');
+      return;
+    }
 
-  const htmlTemplate = `
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASS },
+    });
+
+    const htmlTemplate = `
     <div style="background-color: #09090b; color: #f4f4f5; font-family: sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; border: 1px solid #27272a; border-radius: 16px;">
       <div style="text-align: center; margin-bottom: 30px;">
         <span style="font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #fbbf24; font-size: 16px;">🚨 NOTIFIKASI ORDER JASA BARU</span>
@@ -118,12 +124,17 @@ export async function sendAdminServiceAlertEmail(payload: ServiceAlertPayload): 
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"SeqMaster Core System" <${process.env.GMAIL_USER}>`,
-    to: "awsm.techhouse@gmail.com",
-    subject: `🚨 [NEW SERVICES REQUEST] ${serviceType} - ${customerName}`,
-    html: htmlTemplate,
-  });
+    const result = await transporter.sendMail({
+      from: `"SeqMaster Core System" <${process.env.GMAIL_USER}>`,
+      to: "awsm.techhouse@gmail.com",
+      subject: `🚨 [NEW SERVICES REQUEST] ${serviceType} - ${customerName}`,
+      html: htmlTemplate,
+    });
+
+    console.log('✅ Service alert email sent successfully:', { messageId: result.messageId, to: 'awsm.techhouse@gmail.com' });
+  } catch (error) {
+    console.error('❌ Failed to send service alert email:', error instanceof Error ? error.message : String(error));
+  }
 }
 
 // FIX UTAMA: Kirim Notifikasi Link Invoice Tagihan Termin (Milestone Billing) ke Email Musisi/Klien
