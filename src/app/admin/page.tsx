@@ -6,7 +6,8 @@ import Button from '@/components/ui/Button';
 import { 
   Terminal, ShieldAlert, PlusCircle, LayoutGrid, AudioLines, 
   Trash2, Edit3, UploadCloud, CheckCircle2, ExternalLink, 
-  MessageSquare, Mail, RefreshCw, X, Download, DollarSign, FileText
+  MessageSquare, Mail, RefreshCw, X, Download, DollarSign, FileText,
+  LogOut
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -31,9 +32,15 @@ export default function AdminConsolePage() {
 
   // STATE MANAGEMENT JASA ORDERS & INVOICE MULTI-TERMIN
   const [jasaOrders, setJasaOrders] = useState<any[]>([]);
+  const [servicePrices, setServicePrices] = useState<Record<string, string>>({});
+  const [serviceNotes, setServiceNotes] = useState<Record<string, string>>({});
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // TRACKING UTILITY UPLOAD LOG
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const [uploadingMaster, setUploadingMaster] = useState(false);
 
+  // LIFECYCLE 1: VALIDASI AWAL SESI SAAT MOUNTING
   useEffect(() => {
     const authSession = localStorage.getItem('seq_admin_session');
     const authExpiry = localStorage.getItem('seq_admin_expiry');
@@ -46,6 +53,22 @@ export default function AdminConsolePage() {
     }
   }, []);
 
+  // LIFECYCLE 2: ENGINE PROTEKSI TIMEOUT BACKGROUND (CEK OTOMATIS SETIAP 10 DETIK)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const sessionSecurityTicker = setInterval(() => {
+      const authExpiry = localStorage.getItem('seq_admin_expiry');
+      
+      if (!authExpiry || Date.now() >= Number(authExpiry)) {
+        alert('Sesi operasional administrative Anda telah kedaluwarsa (Batas Maksimal 1 Jam). Akses terminal dikunci otomatis.');
+        clearAdminSession();
+      }
+    }, 10000); // Mengecek sisa waktu token setiap 10 detik
+
+    return () => clearInterval(sessionSecurityTicker);
+  }, [isAuthenticated]);
+
   const clearAdminSession = () => {
     localStorage.removeItem('seq_admin_session');
     localStorage.removeItem('seq_admin_expiry');
@@ -56,6 +79,7 @@ export default function AdminConsolePage() {
     e.preventDefault();
     if (password === '1234Ajasaru') {
       localStorage.setItem('seq_admin_session', 'true');
+      // Menetapkan batas kedaluwarsa sesi ketat 1 jam (3600000 milidetik) kedepan
       localStorage.setItem('seq_admin_expiry', String(Date.now() + 3600000));
       setIsAuthenticated(true);
       fetchRealTimeRecords();
@@ -74,12 +98,50 @@ export default function AdminConsolePage() {
       .from('jasa_orders')
       .select('*, jasa_invoices(*)')
       .order('created_at', { ascending: false });
-    if (serviceData) setJasaOrders(serviceData);
+    if (serviceData) {
+      setJasaOrders(serviceData);
+      
+      // Sinkronisasi isian awal form in-line input dari data database aktif
+      const initialPrices: Record<string, string> = {};
+      const initialNotes: Record<string, string> = {};
+      serviceData.forEach(order => {
+        initialPrices[order.id] = order.price ? Number(order.price).toLocaleString('id-ID') : '';
+        initialNotes[order.id] = order.payment_notes || '';
+      });
+      setServicePrices(initialPrices);
+      setServiceNotes(initialNotes);
+    }
   };
 
   const formatInputToRupiah = (value: string) => {
     const cleanNumber = value.replace(/[^0-9]/g, '');
     return cleanNumber ? Number(cleanNumber).toLocaleString('id-ID') : '';
+  };
+
+  const handleUpdateServiceInvoice = async (orderId: string) => {
+    setUpdatingId(orderId);
+    try {
+      const rawPrice = servicePrices[orderId] ? Number(servicePrices[orderId].replace(/[^0-9]/g, '')) : 0;
+      const response = await fetch('/api/admin/services/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: orderId,
+          price: rawPrice,
+          payment_notes: serviceNotes[orderId] || ''
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Gagal memperbarui invoice jasa.');
+
+      alert('Harga penawaran & Catatan Invoice Jasa Sukses Di-update!');
+      fetchRealTimeRecords();
+    } catch (err: any) {
+      alert(`Gagal Menerapkan Update Finansial: ${err.message}`);
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const handleBinaryFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'preview' | 'master') => {
@@ -107,7 +169,7 @@ export default function AdminConsolePage() {
       }
     } catch (err: any) {
       alert(`Upload Failed: ${err.message}`);
-    } {
+    } finally {
       setUploadingPreview(false);
       setUploadingMaster(false);
     }
@@ -134,7 +196,7 @@ export default function AdminConsolePage() {
           if (error) throw error;
           alert('Data Komponen Sequencer Sukses Diperbarui!');
         } else {
-          const { error } = await supabase.from('products').insert([productPayload]);
+          const { error = null } = await supabase.from('products').insert([productPayload]);
           if (error) throw error;
           alert('Modul Sequencer Baru Berhasil Dipublikasikan!');
         }
@@ -229,6 +291,15 @@ export default function AdminConsolePage() {
           <button onClick={() => setActiveTab('manage')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'manage' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><LayoutGrid size={14} /> Manage Sequencer</button>
           <button onClick={() => setActiveTab('jasa')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition relative ${activeTab === 'jasa' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><AudioLines size={14} /> Jasa Order</button>
           <button onClick={fetchRealTimeRecords} className="p-2 text-zinc-500 hover:text-zinc-200 transition rounded-xl"><RefreshCw size={14} /></button>
+          
+          {/* TOMBOL LOGOUT MANUAL MANDATORI */}
+          <button 
+            onClick={() => { if (confirm('Keluar dari panel administrative admin?')) clearAdminSession(); }} 
+            className="p-2 bg-zinc-900 border border-zinc-800 text-rose-400 hover:bg-rose-950/20 hover:border-rose-900 transition rounded-xl ml-2 flex items-center gap-1 px-3 text-[10px] font-mono uppercase tracking-wider font-bold"
+            title="Terminate Admin Session"
+          >
+            <LogOut size={12} /> Sign Out
+          </button>
         </div>
       </div>
 
