@@ -225,7 +225,7 @@ export default function AdminConsolePage() {
         </div>
 
         <div className="flex items-center gap-2 bg-zinc-950/60 p-1.5 border border-zinc-900 rounded-2xl">
-          <button onClick={() => { setActiveTab('add'); if(!editingId) resetFormFields(); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'add' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><PlusCircle size={14} /> {editingId ? 'Edit Mode' : 'Inject Sequencer'}</button>
+          <button onClick={() => { setActiveTab('add'); if(!editingId) resetFormFields(); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'add' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><PlusCircle size={14} /> {editingId ? 'Edit Mode' : 'Upload Sequencer'}</button>
           <button onClick={() => setActiveTab('manage')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'manage' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><LayoutGrid size={14} /> Manage Sequencer</button>
           <button onClick={() => setActiveTab('jasa')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition relative ${activeTab === 'jasa' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><AudioLines size={14} /> Jasa Order</button>
           <button onClick={fetchRealTimeRecords} className="p-2 text-zinc-500 hover:text-zinc-200 transition rounded-xl"><RefreshCw size={14} /></button>
@@ -237,7 +237,7 @@ export default function AdminConsolePage() {
         <div className={`bg-zinc-900/40 backdrop-blur-md border ${editingId ? 'border-amber-500/30' : 'border-zinc-800/60'} rounded-3xl p-8 max-w-3xl mx-auto shadow-xl space-y-6`}>
           <div className="flex justify-between items-start border-b border-zinc-900 pb-4">
             <h2 className={`text-sm font-black uppercase tracking-wide ${editingId ? 'text-amber-400' : 'text-zinc-200'}`}>
-              {editingId ? '📝 Edit Existing Sequencer Payload' : '⚡ Inject New Digital Sequencer Object'}
+              {editingId ? '📝 Edit Existing Sequencer Payload' : 'Upload New Sequencer'}
             </h2>
             {editingId && (
               <button onClick={resetFormFields} className="text-zinc-500 hover:text-zinc-200 p-1 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center gap-1 text-[10px] font-mono uppercase px-2 py-1"><X size={10} /> Cancel Edit</button>
@@ -300,7 +300,7 @@ export default function AdminConsolePage() {
 
             <div className="md:col-span-2 pt-3">
               <Button type="submit" disabled={uploadingPreview || uploadingMaster} className="w-full text-xs font-black uppercase py-4 tracking-widest">
-                {editingId ? 'Commit Node Update Changes' : 'Commit Secure Node Release'}
+                {editingId ? 'Update Sequencer' : 'Upload New Sequencer'}
               </Button>
             </div>
           </form>
