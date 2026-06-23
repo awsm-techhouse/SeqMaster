@@ -79,8 +79,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, status: finalDatabaseStatus });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('Critical collision in webhook payment automation engine:', error);
-    return NextResponse.json({ error: error.message || 'Internal Hook Core Exception' }, { status: 500 });
+    return NextResponse.json({ error: message || 'Internal Hook Core Exception' }, { status: 500 });
   }
 }

@@ -49,8 +49,9 @@ export async function POST(request: Request) {
     if (dbError) throw dbError;
 
     return NextResponse.json({ token: transaction.token, orderId: uniqueOrderId });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('Checkout internal handler error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: message || 'Internal Server Error' }, { status: 500 });
   }
 }
