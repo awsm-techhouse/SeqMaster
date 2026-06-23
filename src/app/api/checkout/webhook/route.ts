@@ -13,16 +13,36 @@ const supabaseAdmin = createClient(
 export async function POST(request: Request) {
   try {
     const rawBodyText = await request.text();
-    
+
     if (!rawBodyText || rawBodyText.trim() === "") {
+      console.warn('Webhook POST received empty body - acknowledging without processing');
       return NextResponse.json({ status: "verified" }, { status: 200 });
     }
 
-    const body = JSON.parse(rawBodyText);
+    // Try to parse JSON first, fallback to URL-encoded form parsing
+    let body: any = {};
+    const contentType = request.headers.get('content-type') || '';
+    try {
+      if (contentType.includes('application/json')) {
+        body = JSON.parse(rawBodyText);
+      } else if (contentType.includes('application/x-www-form-urlencoded')) {
+        const params = new URLSearchParams(rawBodyText);
+        body = Object.fromEntries(params.entries());
+      } else {
+        // last resort: try JSON.parse, otherwise leave empty
+        body = JSON.parse(rawBodyText);
+      }
+    } catch (parseErr) {
+      console.error('Failed to parse webhook body:', parseErr, 'content-type:', contentType);
+      // Acknowledge the webhook to avoid repeated retries from upstream
+      return NextResponse.json({ status: 'acknowledged' }, { status: 200 });
+    }
+
     const { order_id, transaction_status, fraud_status } = body;
 
     if (!order_id) {
-      return NextResponse.json({ error: 'Missing identifier order_id' }, { status: 400 });
+      console.warn('Webhook payload missing order_id - acknowledging without error');
+      return NextResponse.json({ status: 'missing_order_id' }, { status: 200 });
     }
 
     let isSettled = false;
