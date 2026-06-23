@@ -3,25 +3,30 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const { password } = await request.json();
-    const correctAdminPassword = process.env.ADMIN_PASSWORD;
+    const secureAdminPassword = process.env.ADMIN_PASSWORD;
 
-    if (!correctAdminPassword) {
+    // Validasi konfigurasi environment variable peladen
+    if (!secureAdminPassword) {
       return NextResponse.json(
-        { error: 'Konfigurasi Server Error: Password kunci admin belum diatur di env lokal.' },
+        { error: 'Server configuration error: ADMIN_PASSWORD node is missing.' },
         { status: 500 }
       );
     }
 
-    if (password === correctAdminPassword) {
-      // Mengirim sinyal otorisasi sukses ke sisi klien
-      return NextResponse.json({ authenticated: true, message: 'Clearance Access Granted.' });
+    // Komparasi kata sandi terisolasi di sisi server
+    if (password === secureAdminPassword) {
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json(
-      { authenticated: false, error: 'Kode klaster enkripsi admin tidak valid.' },
+      { error: 'Kunci Sandi Admin Salah. Sesi Akses Ditolak.' },
       { status: 401 }
     );
+
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Internal Server Authentication Error' },
+      { status: 500 }
+    );
   }
 }
