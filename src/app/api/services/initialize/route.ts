@@ -66,8 +66,21 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, orderId: data.id });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
+    let message = 'Internal Server Error';
+
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (error && typeof error === 'object') {
+      if ('message' in error && typeof (error as any).message === 'string') {
+        message = (error as any).message;
+      } else {
+        message = JSON.stringify(error);
+      }
+    } else {
+      message = String(error);
+    }
+
     console.error('Service order pipeline collapsed:', error);
-    return NextResponse.json({ error: message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
