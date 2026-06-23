@@ -18,6 +18,11 @@ export default function BriefForm() {
     e.preventDefault();
     startTransition(async () => {
       try {
+        if (!projectTitle || !customerName || !customerEmail || !whatsappNumber) {
+          alert('Mohon isi semua field yang wajib diisi (Judul, Nama, Email, WhatsApp)');
+          return;
+        }
+
         const payload = {
           project_title: projectTitle,
           category: 'custom',
@@ -29,16 +34,20 @@ export default function BriefForm() {
           notes: notes
         };
 
+        console.log('Sending service order:', payload);
+
         const res = await fetch('/api/services/initialize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
+        console.log('API Response status:', res.status);
         const data = await res.json();
+        console.log('API Response data:', data);
 
-        if (res.ok) {
-          alert('Spesifikasi brief proyek terkirim. Admin akan mengontak Anda via WhatsApp.');
+        if (res.ok && data.success) {
+          alert('✓ Spesifikasi brief proyek terkirim!\nAdmin akan mengontak Anda via WhatsApp untuk negosiasi harga.\n\nOrder ID: ' + data.orderId);
           setProjectTitle('');
           setReferenceUrl('');
           setStemsUrl('');
@@ -47,11 +56,13 @@ export default function BriefForm() {
           setWhatsappNumber('');
           setNotes('');
         } else {
-          alert(`Error: ${data.error || 'Failed to submit brief'}`);
+          const errorMessage = data.error || 'Gagal mengirim brief (status: ' + res.status + ')';
+          console.error('API Error:', errorMessage);
+          alert('❌ Gagal mengirim:\n' + errorMessage);
         }
       } catch (error) {
         console.error('Brief submission error:', error);
-        alert('Gagal mengirim brief. Periksa koneksi server.');
+        alert('❌ Terjadi kesalahan:\n' + (error instanceof Error ? error.message : String(error)));
       }
     });
   };

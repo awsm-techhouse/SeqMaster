@@ -37,17 +37,20 @@ export async function POST(request: Request) {
 
     if (dbError) throw dbError;
 
-    // 2. SOLUSI NOTIFIKASI TYPE-SAFE: Sediakan parameter lengkap sesuai ServiceAlertPayload di email.ts
-    await sendAdminServiceAlertEmail({
+    // 2. SOLUSI NOTIFIKASI TYPE-SAFE: Send email asynchronously (non-blocking)
+    // Email failure should not fail the entire request
+    sendAdminServiceAlertEmail({
       orderId: uniqueServiceId,
       customerName: customer_name || '',
       customerEmail: customer_email || '',
       whatsappNumber: whatsapp_number || '',
       serviceType: service_type || body.category || 'Custom Service',
-      projectTitle: project_title || 'Untitled Project', // Diperbaiki: Memenuhi Type Check
-      referenceLink: reference_url || '',               // Diperbaiki: Memenuhi Type Check
-      driveLink: stems_url || '',                       // Diperbaiki: Memenuhi Type Check
+      projectTitle: project_title || 'Untitled Project',
+      referenceLink: reference_url || '',
+      driveLink: stems_url || '',
       projectNotes: notes || ''
+    }).catch((emailErr) => {
+      console.error('Email notification failed but order was saved:', emailErr);
     });
 
     return NextResponse.json({ success: true, orderId: uniqueServiceId });

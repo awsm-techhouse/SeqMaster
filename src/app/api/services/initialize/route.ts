@@ -16,6 +16,13 @@ export async function POST(request: Request) {
       whatsapp_number 
     } = await request.json();
 
+    // Validate required fields
+    if (!project_title || !customer_name || !customer_email || !whatsapp_number) {
+      return NextResponse.json({
+        error: 'Missing required fields: project_title, customer_name, customer_email, whatsapp_number'
+      }, { status: 400 });
+    }
+
     // 1. Simpan manifes proyek jasa ke tabel internal database Supabase secara aman
     const { data, error } = await supabase
       .from('jasa_orders')
@@ -38,9 +45,10 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    // 2. SINKRONISASI EMAIL: Otomatis kirim alarm notifikasi ke awsm.techhouse@gmail.com pasca-insert sukses
+    // 2. SINKRONISASI EMAIL: Send email asynchronously (non-blocking)
+    // Email failure should not fail the entire request
     if (data) {
-      await sendAdminServiceAlertEmail({
+      sendAdminServiceAlertEmail({
         orderId: data.id,
         customerName: customer_name,
         customerEmail: customer_email,
@@ -50,10 +58,12 @@ export async function POST(request: Request) {
         referenceLink: reference_url || '',
         driveLink: stems_url || '',
         projectNotes: notes || ''
+      }).catch((emailErr) => {
+        console.error('Email notification failed but order was saved:', emailErr);
       });
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, orderId: data.id });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('Service order pipeline collapsed:', error);
