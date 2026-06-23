@@ -132,7 +132,7 @@ export default async function CheckoutStatusPage({ params }: PageProps) {
                     <UserPlus size={13} className="text-emerald-400" /> Amankan Akun Repositori Anda
                   </h4>
                   <p className="text-zinc-500 text-[11px] leading-relaxed">
-                    Email <span className="text-zinc-300 font-mono font-bold">Jika {orderDetails.customer_email}</span> belum terdaftar di sistem. Silakan buat akun sekarang agar seluruh modul yang Anda beli tersimpan rapi di Dashboard.
+                    Jika Email <span className="text-zinc-300 font-mono font-bold">{orderDetails.customer_email}</span> belum terdaftar di sistem. Silakan buat akun sekarang agar seluruh modul yang Anda beli tersimpan rapi di Dashboard.
                   </p>
                 </div>
                 
