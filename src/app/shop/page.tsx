@@ -4,7 +4,7 @@ import ShopCatalogContainer from '@/features/shop/components/ShopCatalogContaine
 import { supabase } from '@/lib/supabase';
 import { Sliders } from 'lucide-react';
 
-// PERBAIKAN: Memaksa pembaruan data real-time dan melewati cache Next.js ISR
+// PERBAIKAN:Memaksa pembaruan data real-time dan melewati cache Next.js ISR
 export const dynamic = 'force-dynamic';
 
 async function getAllActiveProducts() {
