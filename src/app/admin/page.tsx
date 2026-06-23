@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import PageContainer from '@/components/ui/PageContainer';
 import Button from '@/components/ui/Button';
-import { 
-  Terminal, ShieldAlert, PlusCircle, LayoutGrid, AudioLines, 
-  Trash2, Edit3, UploadCloud, CheckCircle2, ExternalLink, 
+import {
+  Terminal, ShieldAlert, PlusCircle, LayoutGrid, AudioLines,
+  Trash2, Edit3, UploadCloud, CheckCircle2, ExternalLink,
   MessageSquare, Mail, RefreshCw, X, Download, DollarSign, FileText,
   LogOut
 } from 'lucide-react';
@@ -44,7 +44,7 @@ export default function AdminConsolePage() {
   useEffect(() => {
     const authSession = localStorage.getItem('seq_admin_session');
     const authExpiry = localStorage.getItem('seq_admin_expiry');
-    
+
     if (authSession === 'true' && authExpiry && Date.now() < Number(authExpiry)) {
       setIsAuthenticated(true);
       fetchRealTimeRecords();
@@ -59,7 +59,7 @@ export default function AdminConsolePage() {
 
     const sessionSecurityTicker = setInterval(() => {
       const authExpiry = localStorage.getItem('seq_admin_expiry');
-      
+
       if (!authExpiry || Date.now() >= Number(authExpiry)) {
         alert('Sesi operasional administrative Anda telah kedaluwarsa (Batas Maksimal 1 Jam). Akses terminal dikunci otomatis.');
         clearAdminSession();
@@ -78,7 +78,7 @@ export default function AdminConsolePage() {
   // REFAKTOR UTAMA: Otentikasi via secure server pipeline API route
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
@@ -111,7 +111,7 @@ export default function AdminConsolePage() {
       .order('created_at', { ascending: false });
     if (serviceData) {
       setJasaOrders(serviceData);
-      
+
       const initialPrices: Record<string, string> = {};
       const initialNotes: Record<string, string> = {};
       serviceData.forEach(order => {
@@ -190,6 +190,7 @@ export default function AdminConsolePage() {
     startTransition(async () => {
       try {
         const numericPrice = Number(price.replace(/[^0-9]/g, ''));
+        // Ganti bagian payload di dalam src/app/admin/page.tsx dengan kode ini
         const productPayload = {
           title,
           artist_name: artist,
@@ -198,9 +199,9 @@ export default function AdminConsolePage() {
           price: numericPrice,
           discount_percent: Number(discount),
           preview_url: previewUrl,
-          master_file_key: masterFileKey
+          master_file_key: masterFileKey,
+          is_active: true // Pastikan status aktif terkirim ke database
         };
-
         if (editingId) {
           const { error } = await supabase.from('products').update(productPayload).eq('id', editingId);
           if (error) throw error;
@@ -286,7 +287,7 @@ export default function AdminConsolePage() {
 
   return (
     <PageContainer className="py-6 space-y-8 animate-in fade-in duration-300">
-      
+
       {/* HUB NAVIGASI TAB UTAMA */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/60 pb-5">
         <div className="text-left">
@@ -297,13 +298,13 @@ export default function AdminConsolePage() {
         </div>
 
         <div className="flex items-center gap-2 bg-zinc-950/60 p-1.5 border border-zinc-900 rounded-2xl">
-          <button onClick={() => { setActiveTab('add'); if(!editingId) resetFormFields(); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'add' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><PlusCircle size={14} /> {editingId ? 'Edit Mode' : 'Upload Sequencer'}</button>
+          <button onClick={() => { setActiveTab('add'); if (!editingId) resetFormFields(); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'add' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><PlusCircle size={14} /> {editingId ? 'Edit Mode' : 'Upload Sequencer'}</button>
           <button onClick={() => setActiveTab('manage')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${activeTab === 'manage' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><LayoutGrid size={14} /> Manage Sequencer</button>
           <button onClick={() => setActiveTab('jasa')} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition relative ${activeTab === 'jasa' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'}`}><AudioLines size={14} /> Jasa Order</button>
           <button onClick={fetchRealTimeRecords} className="p-2 text-zinc-500 hover:text-zinc-200 transition rounded-xl"><RefreshCw size={14} /></button>
-          
-          <button 
-            onClick={() => { if (confirm('Keluar dari panel administrative admin?')) clearAdminSession(); }} 
+
+          <button
+            onClick={() => { if (confirm('Keluar dari panel administrative admin?')) clearAdminSession(); }}
             className="p-2 bg-zinc-900 border border-zinc-800 text-rose-400 hover:bg-rose-950/20 hover:border-rose-900 transition rounded-xl ml-2 flex items-center gap-1 px-3 text-[10px] font-mono uppercase tracking-wider font-bold"
             title="Terminate Admin Session"
           >
@@ -455,7 +456,7 @@ export default function AdminConsolePage() {
             <div className="grid grid-cols-1 gap-6 text-left text-xs">
               {jasaOrders.map((order) => (
                 <div key={order.id} className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-3xl p-6 shadow-xl grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
-                  
+
                   {/* KOLOM A: MANIFES INFORMASI BRIEF KLIEN */}
                   <div className="space-y-4 lg:col-span-1 border-r border-zinc-800/40 pr-0 lg:pr-6">
                     <div>
@@ -484,7 +485,7 @@ export default function AdminConsolePage() {
                   {/* KOLOM B: HISTORI MULTI-TERMIN INVOICE (EDITABLE PANEL) */}
                   <div className="space-y-3 lg:col-span-1 border-r border-zinc-800/40 pr-0 lg:pr-6">
                     <span className="block text-[10px] font-mono text-zinc-400 uppercase tracking-wider mb-2 border-b border-zinc-900 pb-1.5">📜 Payment Invoice Term History</span>
-                    
+
                     {(!order.jasa_invoices || order.jasa_invoices.length === 0) ? (
                       <p className="text-zinc-600 italic font-mono text-[10px] py-4">Belum ada invoice termin yang diterbitkan.</p>
                     ) : (
@@ -532,13 +533,13 @@ export default function AdminConsolePage() {
                   {/* KOLOM C: INJEKSI GENERATE TAGIHAN TERMIN BARU */}
                   <div className="space-y-3 lg:col-span-1">
                     <span className="block text-[10px] font-mono text-zinc-400 uppercase tracking-wider mb-2 border-b border-zinc-900 pb-1.5">➕ Issue New Payment Milestone</span>
-                    
+
                     <form onSubmit={async (e) => {
                       e.preventDefault();
                       const targetForm = e.currentTarget;
                       const amtInput = targetForm.elements.namedItem('term_amount') as HTMLInputElement;
                       const descInput = targetForm.elements.namedItem('term_desc') as HTMLInputElement;
-                      
+
                       try {
                         const response = await fetch('/api/admin/services/invoice', {
                           method: 'POST',

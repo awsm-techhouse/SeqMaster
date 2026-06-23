@@ -4,11 +4,10 @@ import ShopCatalogContainer from '@/features/shop/components/ShopCatalogContaine
 import { supabase } from '@/lib/supabase';
 import { Sliders } from 'lucide-react';
 
-// Konfigurasi Incremental Static Regeneration (ISR) Next.js
-export const revalidate = 10; 
+// PERBAIKAN: Memaksa pembaruan data real-time dan melewati cache Next.js ISR
+export const dynamic = 'force-dynamic';
 
 async function getAllActiveProducts() {
-  // PERBAIKAN: Menyisipkan 'discount_percent' ke dalam baris seleksi data Supabase
   const { data, error } = await supabase
     .from('products')
     .select('id, title, artist_name, bpm, genre, price, discount_percent, preview_url')
@@ -26,7 +25,6 @@ export default async function ShopCatalogPage() {
 
   return (
     <PageContainer>
-      {/* HEADER UTAMA TOKO DENGAN ESTETIKA REKONSILIASI RETAIL KEMEWAHAN */}
       <header className="mb-10 border-b border-zinc-900 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight uppercase text-zinc-100 flex items-center gap-2 select-none">
@@ -38,7 +36,6 @@ export default async function ShopCatalogPage() {
         </div>
       </header>
 
-      {/* Menyalurkan payload dari server langsung ke kontainer interaktif client-side dengan tipe data yang sinkron */}
       <ShopCatalogContainer items={initialProducts} />
     </PageContainer>
   );
