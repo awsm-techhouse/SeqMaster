@@ -245,11 +245,34 @@ export default function AdminConsolePage() {
 
   const handleFinishJasaOrder = async (orderId: string) => {
     if (!confirm('Tandai status pengerjaan proyek kustom ini selesai penuh?')) return;
-    const { error } = await supabase.from('jasa_orders').update({ status: 'finished' }).eq('id', orderId);
-    if (error) alert(error.message);
-    else {
-      alert('Status proyek diperbarui menjadi Finished.');
-      fetchRealTimeRecords();
+
+    try {
+      const { data: openInvs, error: invErr } = await supabase
+        .from('jasa_invoices')
+        .select('id')
+        .eq('jasa_order_id', orderId)
+        .neq('status', 'settlement')
+        .limit(1);
+
+      if (invErr) {
+        alert(invErr.message || 'Gagal memeriksa status invoice.');
+        return;
+      }
+
+      if (openInvs && openInvs.length > 0) {
+        alert('Tidak dapat menyelesaikan proyek: masih ada invoice aktif yang belum dibayar. Selesaikan invoice terlebih dahulu.');
+        return;
+      }
+
+      const { error: updateErr } = await supabase.from('jasa_orders').update({ status: 'finished' }).eq('id', orderId);
+      if (updateErr) {
+        alert(updateErr.message);
+      } else {
+        alert('Status proyek diperbarui menjadi Finished.');
+        fetchRealTimeRecords();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan saat menyelesaikan proyek.');
     }
   };
 
@@ -585,7 +608,7 @@ export default function AdminConsolePage() {
                       </form>
                     )}
 
-                    {order.status === 'pending' && (
+                    {order.status === 'pending' && !(order.jasa_invoices && order.jasa_invoices.some((inv: any) => inv.status !== 'settlement')) && (
                       <div className="pt-3 border-t border-zinc-900 mt-2">
                         <button onClick={() => handleFinishJasaOrder(order.id)} className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-zinc-100 font-bold py-2.5 rounded-xl text-[10px] uppercase tracking-wider transition">Selesaikan Kontrak (Finish)</button>
                       </div>
