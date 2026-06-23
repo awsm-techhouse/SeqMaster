@@ -42,7 +42,6 @@ export async function POST(request: Request) {
         whatsapp_number,
         total_amount: amount,
         status: 'pending',
-        type: 'retail',
         requires_activation: isNewCustomerNode,
         payment_token: transaction.token // Token disimpan aman di DB
       }]);
