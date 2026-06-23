@@ -40,9 +40,15 @@ export async function POST(request: Request) {
 
     const { order_id, transaction_status, fraud_status } = body;
 
-    if (!order_id) {
-      console.warn('Webhook payload missing order_id - acknowledging without error');
+    if (!order_id || typeof order_id !== 'string') {
+      console.warn('Webhook payload missing or invalid order_id - acknowledging without error', { order_id });
       return NextResponse.json({ status: 'missing_order_id' }, { status: 200 });
+    }
+
+    const validOrderIdPattern = /^SEQ-\d+-\d+$/;
+    if (!validOrderIdPattern.test(order_id)) {
+      console.warn('Webhook received malformed order_id - ignoring webhook', { order_id });
+      return NextResponse.json({ status: 'invalid_order_id' }, { status: 200 });
     }
 
     let isSettled = false;
@@ -58,24 +64,30 @@ export async function POST(request: Request) {
     }
 
     // 1. Mutasi status transaksi di database
-    const { data: updatedOrder, error: dbError } = await supabaseAdmin
+    const { data: updatedOrderData, error: dbError } = await supabaseAdmin
       .from('orders')
       .update({ status: finalDatabaseStatus })
       .eq('id', order_id)
-      .select('*, products(*)')
-      .single();
+      .select('*, products(*)');
 
     if (dbError) throw dbError;
 
+    if (!updatedOrderData || updatedOrderData.length === 0) {
+      console.warn('Webhook order_id not found in orders table:', order_id);
+      return NextResponse.json({ success: true, status: finalDatabaseStatus, note: 'order_not_found' });
+    }
+
+    const orderRecord = Array.isArray(updatedOrderData) ? updatedOrderData[0] : updatedOrderData;
+
     // 2. Kirim Link Download & Nota ke Email Pembeli
-    if (isSettled && updatedOrder) {
+    if (isSettled && orderRecord) {
       let secureDownloadUrl = '#';
 
-      if (updatedOrder.products?.master_file_key) {
+      if (orderRecord.products?.master_file_key) {
         try {
           const downloadCommand = new GetObjectCommand({
             Bucket: BUCKET_NAME,
-            Key: updatedOrder.products.master_file_key,
+            Key: orderRecord.products.master_file_key,
           });
           secureDownloadUrl = await getSignedUrl(r2Client, downloadCommand, { expiresIn: 172800 });
         } catch (r2Err) {
@@ -87,13 +99,13 @@ export async function POST(request: Request) {
       const registerFallbackLink = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')}/auth`;
 
       await sendTransactionalReceiptEmail({
-        customerName: updatedOrder.customer_name,
-        customerEmail: updatedOrder.customer_email,
-        orderId: updatedOrder.id,
-        productTitle: updatedOrder.products?.title || 'Premium Sequencer Patch',
-        totalAmount: updatedOrder.total_amount,
+        customerName: orderRecord.customer_name,
+        customerEmail: orderRecord.customer_email,
+        orderId: orderRecord.id,
+        productTitle: orderRecord.products?.title || 'Premium Sequencer Patch',
+        totalAmount: orderRecord.total_amount,
         downloadUrl: secureDownloadUrl,
-        activationUrl: updatedOrder.requires_activation ? registerFallbackLink : undefined
+        activationUrl: orderRecord.requires_activation ? registerFallbackLink : undefined
       });
     }
 
