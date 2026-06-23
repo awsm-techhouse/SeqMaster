@@ -52,7 +52,7 @@ function AuthPortalContent() {
           throw new Error(result.error || 'Gagal mengeksekusi pipeline pendaftaran.');
         }
 
-        alert('Registrasi Berhasil! Pipa SMTP Gmail aman. Silakan buka kotak masuk atau spam email Anda untuk mengklik tautan aktivasi akun.');
+        alert('Registrasi Berhasil! Silakan buka kotak masuk atau spam email Anda untuk mengklik tautan aktivasi akun.');
         setIsLoginView(true); // Kembalikan ke halaman login setelah sukses daftar
       }
     } catch (err: any) {

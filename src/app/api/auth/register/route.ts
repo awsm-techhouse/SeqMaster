@@ -63,11 +63,11 @@ export async function POST(request: Request) {
       <div style="background-color: #09090b; color: #f4f4f5; font-family: sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; border: 1px solid #27272a; border-radius: 16px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <span style="font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #f4f4f5; font-size: 18px;">SEQMASTER</span>
-          <p style="font-size: 10px; color: #71717a; font-family: monospace; text-transform: uppercase; margin-top: 5px;">Acoustic Engineering Platform Node</p>
+          <p style="font-size: 10px; color: #71717a; font-family: monospace; text-transform: uppercase; margin-top: 5px;">Account Registration</p>
         </div>
         <h2 style="font-weight: 900; text-transform: uppercase; color: #10b981; font-size: 16px; border-bottom: 1px solid #18181b; padding-bottom: 10px;">Konfirmasi Aktivasi Akun</h2>
-        <p style="font-size: 13px; color: #a1a1aa; line-height: 1.6;">Halo Musisi,</p>
-        <p style="font-size: 13px; color: #a1a1aa; line-height: 1.6;">Terima kasih telah bergabung di ekosistem digital SeqMaster. Selesaikan aktivasi untuk membuka repositori dashboard privat sekuenser Anda.</p>
+        <p style="font-size: 13px; color: #a1a1aa; line-height: 1.6;">Halo ${name},</p>
+        <p style="font-size: 13px; color: #a1a1aa; line-height: 1.6;">Terima kasih telah bergabung di ekosistem digital SeqMaster. Selesaikan aktivasi untuk membuka dashboard Anda.</p>
         <div style="margin-top: 30px; text-align: center;">
           <a href="${activationLink}" style="display: block; background-color: #10b981; color: #09090b; font-weight: bold; text-decoration: none; padding: 14px; border-radius: 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">Aktivasi Akun Sekarang</a>
         </div>
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     `;
 
     await transporter.sendMail({
-      from: `"SeqMaster Operations" <${process.env.GMAIL_USER}>`,
+      from: `"SeqMaster Audio" <${process.env.GMAIL_USER}>`,
       to: email,
       subject: `[ACTION REQUIRED] Activate Your SeqMaster Account`,
       html: htmlTemplate,

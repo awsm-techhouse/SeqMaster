@@ -76,7 +76,7 @@ export async function sendTransactionalReceiptEmail(payload: EmailPayload): Prom
   `;
 
   await transporter.sendMail({
-    from: `"SeqMaster Operations" <${process.env.GMAIL_USER}>`,
+    from: `"SeqMaster Audio" <${process.env.GMAIL_USER}>`,
     to: customerEmail,
     subject: `[CONFIRMED] Secure Node Delivery - Order ${orderId}`,
     html: htmlTemplate,
