@@ -204,7 +204,9 @@ export default function UserDashboard() {
               <div key={inv.id} className="bg-zinc-900/40 border border-zinc-800/60 rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-xl relative backdrop-blur-sm">
                 <div>
                   <div className="flex justify-between items-center select-none">
-                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-mono font-black px-2 py-0.5 rounded uppercase tracking-wider">Awaiting Payment</span>
+                    <span className={`text-[9px] font-mono font-black px-2 py-0.5 rounded uppercase tracking-wider ${inv.status === 'settlement' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : inv.status === 'expired' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                      {inv.status === 'settlement' ? 'Paid' : inv.status === 'expired' ? 'Expired' : 'Awaiting Payment'}
+                    </span>
                     <span className="text-[9px] font-mono text-zinc-600 uppercase">ID: {inv.id}</span>
                   </div>
                   <h4 className="text-sm font-black text-zinc-100 uppercase mt-2.5 truncate">{inv.project_title || 'Custom Audio Production'}</h4>
@@ -217,8 +219,8 @@ export default function UserDashboard() {
                     <span className="text-emerald-400 font-mono font-bold text-sm">IDR {Number(inv.amount).toLocaleString('id-ID')}</span>
                   </div>
                   <div className="w-40">
-                    <Button variant="primary" onClick={() => executeServiceMidtransPayment(inv.id, inv.payment_token)} className="!py-2.5 text-[10px] w-full font-black uppercase tracking-wider">
-                      <CreditCard size={11} className="inline mr-1" /> Pay Invoice
+                    <Button variant="primary" disabled={inv.status !== 'pending'} onClick={() => executeServiceMidtransPayment(inv.id, inv.payment_token)} className="!py-2.5 text-[10px] w-full font-black uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed">
+                      <CreditCard size={11} className="inline mr-1" /> {inv.status === 'pending' ? 'Pay Invoice' : 'Not Available'}
                     </Button>
                   </div>
                 </div>

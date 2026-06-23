@@ -35,6 +35,8 @@ export default function AdminConsolePage() {
   const [servicePrices, setServicePrices] = useState<Record<string, string>>({});
   const [serviceNotes, setServiceNotes] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [submittingInvoiceOrderId, setSubmittingInvoiceOrderId] = useState<string | null>(null);
+  const [cancelingInvoiceId, setCancelingInvoiceId] = useState<string | null>(null);
 
   // TRACKING UTILITY UPLOAD LOG
   const [uploadingPreview, setUploadingPreview] = useState(false);
@@ -273,6 +275,26 @@ export default function AdminConsolePage() {
       }
     } catch (err: any) {
       alert(err.message || 'Terjadi kesalahan saat menyelesaikan proyek.');
+    }
+  };
+
+  const handleCancelInvoice = async (invoiceId: string) => {
+    if (!confirm('Batalkan payment ini dan tandai invoice sebagai kadaluarsa?')) return;
+    setCancelingInvoiceId(invoiceId);
+    try {
+      const response = await fetch('/api/admin/services/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoice_id: invoiceId, action: 'cancel' })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Gagal membatalkan invoice.');
+      alert('Invoice berhasil dibatalkan dan dinyatakan kadaluarsa.');
+      fetchRealTimeRecords();
+    } catch (err: any) {
+      alert(err.message || 'Gagal membatalkan invoice.');
+    } finally {
+      setCancelingInvoiceId(null);
     }
   };
 
@@ -541,10 +563,15 @@ export default function AdminConsolePage() {
                               </span>
                             </div>
                             <input type="text" name="edit_dsc" required defaultValue={inv.description} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-zinc-100 uppercase" disabled={inv.status === 'settlement'} />
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               <input type="text" name="edit_amt" required defaultValue={Number(inv.amount).toLocaleString('id-ID')} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] font-mono text-emerald-400 font-bold" onChange={(e) => e.target.value = formatInputToRupiah(e.target.value)} disabled={inv.status === 'settlement'} />
                               {inv.status !== 'settlement' && (
                                 <button type="submit" className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 text-[9px] font-black uppercase px-2 rounded-lg transition">Save</button>
+                              )}
+                              {inv.status !== 'settlement' && (
+                                <button type="button" onClick={() => handleCancelInvoice(inv.id)} disabled={cancelingInvoiceId === inv.id} className="bg-rose-500 text-zinc-950 hover:bg-rose-400 text-[9px] font-black uppercase px-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                  {cancelingInvoiceId === inv.id ? 'Membatalkan...' : 'Cancel Payment'}
+                                </button>
                               )}
                             </div>
                           </form>
@@ -571,6 +598,7 @@ export default function AdminConsolePage() {
                         const amtInput = targetForm.elements.namedItem('term_amount') as HTMLInputElement;
                         const descInput = targetForm.elements.namedItem('term_desc') as HTMLInputElement;
 
+                        setSubmittingInvoiceOrderId(order.id);
                         try {
                           const response = await fetch('/api/admin/services/invoice', {
                             method: 'POST',
@@ -594,6 +622,8 @@ export default function AdminConsolePage() {
                           fetchRealTimeRecords();
                         } catch (err: any) {
                           alert(err.message);
+                        } finally {
+                          setSubmittingInvoiceOrderId(null);
                         }
                       }} className="space-y-3">
                         <div className="space-y-1">
@@ -602,8 +632,8 @@ export default function AdminConsolePage() {
                         <div className="space-y-1">
                           <input type="text" name="term_amount" required placeholder="NOMINAL HARGA (IDR)" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none" onChange={(e) => e.target.value = formatInputToRupiah(e.target.value)} />
                         </div>
-                        <button type="submit" className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition">
-                          Terbitkan & Blast Invoice
+                        <button type="submit" disabled={submittingInvoiceOrderId === order.id} className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition">
+                          {submittingInvoiceOrderId === order.id ? 'Mengirim...' : 'Terbitkan & Blast Invoice'}
                         </button>
                       </form>
                     )}

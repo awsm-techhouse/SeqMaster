@@ -23,6 +23,7 @@ interface InvoiceRequestBody {
   customer_email?: string;
   whatsapp_number?: string;
   project_title?: string;
+  action?: string;
 }
 
 export async function POST(request: Request) {
@@ -36,10 +37,21 @@ export async function POST(request: Request) {
       customer_name, 
       customer_email, 
       whatsapp_number, 
-      project_title 
+      project_title,
+      action
     } = body;
 
     const numericAmount = Number(amount);
+
+    if (invoice_id && action === 'cancel') {
+      const { error: cancelError } = await supabaseAdmin
+        .from('jasa_invoices')
+        .update({ status: 'expired' })
+        .eq('id', invoice_id);
+
+      if (cancelError) throw cancelError;
+      return NextResponse.json({ success: true, mode: 'cancel' });
+    }
 
     if (invoice_id) {
       const { error: updateError } = await supabaseAdmin
@@ -60,9 +72,9 @@ export async function POST(request: Request) {
 
     const { data: existingOpenInvoice, error: openInvoiceError } = await supabaseAdmin
       .from('jasa_invoices')
-      .select('id')
+      .select('id, status')
       .eq('jasa_order_id', jasa_order_id)
-      .neq('status', 'settlement')
+      .in('status', ['pending'])
       .limit(1);
 
     if (openInvoiceError) throw openInvoiceError;

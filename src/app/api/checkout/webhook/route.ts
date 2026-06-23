@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'missing_order_id' }, { status: 200 });
     }
 
-    const validOrderIdPattern = /^SEQ-\d+-\d+$/;
+    const validOrderIdPattern = /^(SEQ|INV)-\d+-\d+$/;
     if (!validOrderIdPattern.test(order_id)) {
       console.warn('Webhook received malformed order_id - ignoring webhook', { order_id });
       return NextResponse.json({ status: 'invalid_order_id' }, { status: 200 });
@@ -59,11 +59,13 @@ export async function POST(request: Request) {
         finalDatabaseStatus = 'settlement';
         isSettled = true;
       }
-    } else if (['cancel', 'deny', 'expire'].includes(transaction_status)) {
+    } else if (transaction_status === 'expire') {
+      finalDatabaseStatus = 'expired';
+    } else if (['cancel', 'deny'].includes(transaction_status)) {
       finalDatabaseStatus = 'failed';
     }
 
-    // 1. Mutasi status transaksi di database
+    // 1. Try updating retail orders first
     const { data: updatedOrderData, error: dbError } = await supabaseAdmin
       .from('orders')
       .update({ status: finalDatabaseStatus })
@@ -72,14 +74,29 @@ export async function POST(request: Request) {
 
     if (dbError) throw dbError;
 
-    if (!updatedOrderData || updatedOrderData.length === 0) {
-      console.warn('Webhook order_id not found in orders table:', order_id);
-      return NextResponse.json({ success: true, status: finalDatabaseStatus, note: 'order_not_found' });
+    let orderRecord: any = null;
+
+    if (updatedOrderData && updatedOrderData.length > 0) {
+      orderRecord = Array.isArray(updatedOrderData) ? updatedOrderData[0] : updatedOrderData;
     }
 
-    const orderRecord = Array.isArray(updatedOrderData) ? updatedOrderData[0] : updatedOrderData;
+    // 2. If retail order not found, try updating jasa_invoices (service invoices)
+    let invoiceRecord: any = null;
+    if (!orderRecord) {
+      const { data: updatedInvoiceData, error: invErr } = await supabaseAdmin
+        .from('jasa_invoices')
+        .update({ status: finalDatabaseStatus })
+        .eq('id', order_id)
+        .select('*, jasa_orders(*)');
 
-    // 2. Kirim Link Download & Nota ke Email Pembeli
+      if (invErr) throw invErr;
+
+      if (updatedInvoiceData && updatedInvoiceData.length > 0) {
+        invoiceRecord = Array.isArray(updatedInvoiceData) ? updatedInvoiceData[0] : updatedInvoiceData;
+      }
+    }
+
+    // 3. Send emails or process download links for retail orders
     if (isSettled && orderRecord) {
       let secureDownloadUrl = '#';
 
