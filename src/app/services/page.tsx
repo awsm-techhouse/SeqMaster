@@ -125,12 +125,12 @@ export default function ServicesPage() {
         {/* KOLOM KIRI: SHOWCASE AUDITION DEMO STUDIO (APPLE GLASS SURFACE) */}
         <div className="lg:col-span-4 bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-6 shadow-xl space-y-6">
           <h2 className="text-xs font-black tracking-tight uppercase text-zinc-300 flex items-center gap-1.5 select-none">
-            <Music4 size={12} className="text-emerald-400" /> Audition Lab Center
+            <Music4 size={12} className="text-emerald-400" /> Mixing & Mastering Demo
           </h2>
           
           <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-4 text-center space-y-4">
             <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-500 block">
-              SeqMaster Processing Engine Blueprint Demo
+              SeqMaster Processing Demo
             </span>
             
             <div className="flex gap-2 justify-center">

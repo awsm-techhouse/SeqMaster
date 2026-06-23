@@ -81,10 +81,10 @@ function AuthPortalContent() {
           <KeyRound className="text-emerald-400" size={18} />
         </div>
         <h2 className="text-sm font-black tracking-tight uppercase text-zinc-100">
-          {isLoginView ? 'Login Portal Node' : 'Create Network Node'}
+          {isLoginView ? 'Login Account' : 'Register Account'}
         </h2>
         <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-1">
-          {isLoginView ? 'Authorize Security Session' : 'Register Secure Account'}
+          {isLoginView ? 'Welcome Back!' : 'Start Creating Account'}
         </p>
       </div>
 
@@ -148,7 +148,7 @@ function AuthPortalContent() {
 
         <div className="pt-2">
           <Button type="submit" disabled={loading} className="!py-3 text-[10px] tracking-widest font-black uppercase">
-            {loading ? 'Processing Protocol...' : isLoginView ? 'Sign In Node' : 'Initialize Node'}
+            {loading ? 'Registering...' : isLoginView ? 'Sign In' : 'Create Account'}
           </Button>
         </div>
       </form>
@@ -182,7 +182,7 @@ export default function AuthPortalPage() {
     <PageContainer className="flex items-center justify-center min-h-screen">
       <Suspense fallback={
         <div className="text-zinc-600 font-mono text-[10px] uppercase tracking-widest animate-pulse">
-          Loading Security Network Node...
+          Loading Security Network...
         </div>
       }>
         <AuthPortalContent />
