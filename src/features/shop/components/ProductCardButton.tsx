@@ -1,18 +1,22 @@
 'use client';
 
 import React from 'react';
-import { Play, Pause, Eye } from 'lucide-react';
+import { Play, Pause, Eye, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/LayoutPrimitives';
 import { useAudioSystem } from '@/context/AudioPlayerContext';
 
 interface ProductCardButtonProps {
-  product: any;
+  product: {
+    id: string | number;
+    preview_url?: string | null;
+    [key: string]: unknown; // Allow other properties to be passed through
+  };
   onBuyClick?: () => void; // Dibuat opsional karena fungsi dialihkan ke halaman rute dinamis internal
 }
 
-export default function ProductCardButton({ product }: ProductCardButtonProps) {
+export default function ProductCardButton({ product, onBuyClick }: ProductCardButtonProps) {
   const { activeTrackId, isPlaying, triggerPlayback } = useAudioSystem();
-  const currentIsPlaying = activeTrackId === product.id && isPlaying;
+  const currentIsPlaying = activeTrackId === String(product.id) && isPlaying;
 
   const resolveAudioPlaybackUrl = () => {
     if (!product.preview_url) return '#';
@@ -31,19 +35,28 @@ export default function ProductCardButton({ product }: ProductCardButtonProps) {
       {/* Tombol Pemutar Audio Preview */}
       <Button 
         variant="secondary" 
-        onClick={() => triggerPlayback(product.id, resolveAudioPlaybackUrl())} 
+        onClick={() => triggerPlayback(String(product.id), resolveAudioPlaybackUrl())} 
         className="!py-2 border-zinc-800/80 hover:border-zinc-700"
       >
         {currentIsPlaying ? <Pause size={14} className="text-rose-400" /> : <Play size={14} className="text-emerald-400" />}
         <span className="text-[10px] tracking-wider">{currentIsPlaying ? 'Stop Preview' : 'Play Preview'}</span>
       </Button>
 
-      {/* DIUBAH: Mengalihkan aksi tombol langsung untuk membuka halaman detail shareable */}
-      <a href={`/shop/${product.id}`} className="block w-full">
-        <Button variant="primary" className="!py-2.5 text-[10px] tracking-wider">
-          <Eye size={14} /> View Module
-        </Button>
-      </a>
+      {onBuyClick ? (
+        <button
+          type="button"
+          onClick={onBuyClick}
+          className="w-full bg-emerald-500 text-zinc-950 hover:bg-emerald-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-wider transition active:scale-[0.98]"
+        >
+          <CreditCard size={14} className="inline mr-1" /> Beli Sekarang
+        </button>
+      ) : (
+        <a href={`/shop/${product.id}`} className="block w-full">
+          <Button variant="primary" className="!py-2.5 text-[10px] tracking-wider">
+            <Eye size={14} /> View Module
+          </Button>
+        </a>
+      )}
     </div>
   );
 }

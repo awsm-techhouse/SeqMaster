@@ -534,44 +534,56 @@ export default function AdminConsolePage() {
                   <div className="space-y-3 lg:col-span-1">
                     <span className="block text-[10px] font-mono text-zinc-400 uppercase tracking-wider mb-2 border-b border-zinc-900 pb-1.5">➕ Issue New Payment Milestone</span>
 
-                    <form onSubmit={async (e) => {
-                      e.preventDefault();
-                      const targetForm = e.currentTarget;
-                      const amtInput = targetForm.elements.namedItem('term_amount') as HTMLInputElement;
-                      const descInput = targetForm.elements.namedItem('term_desc') as HTMLInputElement;
+                    {order.jasa_invoices && order.jasa_invoices.some((inv: any) => inv.status !== 'settlement') ? (
+                      <div className="space-y-2 p-4 bg-rose-950/60 border border-rose-900 rounded-3xl text-zinc-200 text-[10px] font-mono">
+                        <p className="font-bold uppercase tracking-wider">Invoice aktif belum selesai</p>
+                        <p className="leading-relaxed text-zinc-400">
+                          Ada invoice termin yang masih berstatus pending atau belum settlement. Selesaikan pembayaran invoice aktif terlebih dahulu sebelum menerbitkan invoice baru.
+                        </p>
+                      </div>
+                    ) : (
+                      <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        const targetForm = e.currentTarget;
+                        const amtInput = targetForm.elements.namedItem('term_amount') as HTMLInputElement;
+                        const descInput = targetForm.elements.namedItem('term_desc') as HTMLInputElement;
 
-                      try {
-                        const response = await fetch('/api/admin/services/invoice', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            jasa_order_id: order.id,
-                            amount: Number(amtInput.value.replace(/[^0-9]/g, '')),
-                            description: descInput.value,
-                            customer_name: order.customer_name,
-                            customer_email: order.customer_email,
-                            whatsapp_number: order.whatsapp_number,
-                            project_title: order.project_title
-                          })
-                        });
-                        if (!response.ok) throw new Error('Gagal memproses tagihan.');
-                        alert('Tagihan termin sukses diterbitkan dan dikirim langsung ke email klien!');
-                        targetForm.reset();
-                        fetchRealTimeRecords();
-                      } catch (err: any) {
-                        alert(err.message);
-                      }
-                    }} className="space-y-3">
-                      <div className="space-y-1">
-                        <input type="text" name="term_desc" required placeholder="CONTOH: DP 50% / PELUNASAN" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 uppercase focus:border-emerald-500 focus:outline-none" />
-                      </div>
-                      <div className="space-y-1">
-                        <input type="text" name="term_amount" required placeholder="NOMINAL HARGA (IDR)" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none" onChange={(e) => e.target.value = formatInputToRupiah(e.target.value)} />
-                      </div>
-                      <button type="submit" className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition">
-                        Terbitkan & Blast Invoice
-                      </button>
-                    </form>
+                        try {
+                          const response = await fetch('/api/admin/services/invoice', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              jasa_order_id: order.id,
+                              amount: Number(amtInput.value.replace(/[^0-9]/g, '')),
+                              description: descInput.value,
+                              customer_name: order.customer_name,
+                              customer_email: order.customer_email,
+                              whatsapp_number: order.whatsapp_number,
+                              project_title: order.project_title
+                            })
+                          });
+                          if (!response.ok) {
+                            const result = await response.json();
+                            throw new Error(result.error || 'Gagal memproses tagihan.');
+                          }
+                          alert('Tagihan termin sukses diterbitkan dan dikirim langsung ke email klien!');
+                          targetForm.reset();
+                          fetchRealTimeRecords();
+                        } catch (err: any) {
+                          alert(err.message);
+                        }
+                      }} className="space-y-3">
+                        <div className="space-y-1">
+                          <input type="text" name="term_desc" required placeholder="CONTOH: DP 50% / PELUNASAN" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 uppercase focus:border-emerald-500 focus:outline-none" />
+                        </div>
+                        <div className="space-y-1">
+                          <input type="text" name="term_amount" required placeholder="NOMINAL HARGA (IDR)" className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none" onChange={(e) => e.target.value = formatInputToRupiah(e.target.value)} />
+                        </div>
+                        <button type="submit" className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition">
+                          Terbitkan & Blast Invoice
+                        </button>
+                      </form>
+                    )}
 
                     {order.status === 'pending' && (
                       <div className="pt-3 border-t border-zinc-900 mt-2">

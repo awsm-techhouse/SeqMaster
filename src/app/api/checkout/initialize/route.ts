@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-// @ts-ignore
-import MidtransClient from 'midtrans-client';
+import { Snap } from 'midtrans-client';
 
-const snap = new MidtransClient.Snap({
+const snap = new Snap({
   isProduction: false,
-  serverKey: process.env.MIDTRANS_SERVER_KEY,
-  clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
+  serverKey: process.env.MIDTRANS_SERVER_KEY || '',
+  clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ''
 });
 
 export async function POST(request: Request) {

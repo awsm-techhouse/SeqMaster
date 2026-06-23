@@ -1,25 +1,33 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendUserInvoiceNotificationEmail } from '@/lib/email';
-// @ts-ignore
-import MidtransClient from 'midtrans-client';
+import { Snap } from 'midtrans-client';
+
+const snap = new Snap({
+  isProduction: false,
+  serverKey: process.env.MIDTRANS_SERVER_KEY || '',
+  clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ''
+});
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-// FIX INSTANSIASI: Memastikan constructor Snap Midtrans terpanggil dengan benar di berbagai env compiler
-const MidtransSnapConstructor = MidtransClient.Snap || (MidtransClient as any).default?.Snap;
-const snap = new MidtransSnapConstructor({
-  isProduction: false,
-  serverKey: process.env.MIDTRANS_SERVER_KEY,
-  clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
-});
+interface InvoiceRequestBody {
+  invoice_id?: string;
+  jasa_order_id?: string | number;
+  amount?: string | number;
+  description?: string;
+  customer_name?: string;
+  customer_email?: string;
+  whatsapp_number?: string;
+  project_title?: string;
+}
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as InvoiceRequestBody;
     const { 
       invoice_id,
       jasa_order_id, 
@@ -46,6 +54,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, mode: 'update' });
     }
 
+    if (!jasa_order_id) {
+      return NextResponse.json({ error: 'Missing jasa_order_id for invoice creation' }, { status: 400 });
+    }
+
+    const { data: existingOpenInvoice, error: openInvoiceError } = await supabaseAdmin
+      .from('jasa_invoices')
+      .select('id')
+      .eq('jasa_order_id', jasa_order_id)
+      .neq('status', 'settlement')
+      .limit(1);
+
+    if (openInvoiceError) throw openInvoiceError;
+    if (existingOpenInvoice && existingOpenInvoice.length > 0) {
+      return NextResponse.json({
+        error: 'Masih ada invoice termin yang belum selesai. Selesaikan invoice aktif terlebih dahulu sebelum menerbitkan invoice baru.'
+      }, { status: 400 });
+    }
+
     const uniqueInvoiceId = `INV-${Date.now()}-${Math.floor(Math.random() * 100)}`;
 
     // 1. Daftarkan ke server Midtrans Snap
@@ -56,11 +82,15 @@ export async function POST(request: Request) {
     const transaction = await snap.createTransaction(parameter);
 
     // 2. Simpan entri tagihan baru ke database
+    const invoiceOrderId = typeof jasa_order_id === 'string' && jasa_order_id.trim() !== '' && !isNaN(Number(jasa_order_id))
+      ? Number(jasa_order_id)
+      : jasa_order_id;
+
     const { data, error: dbError } = await supabaseAdmin
       .from('jasa_invoices')
       .insert([{
         id: uniqueInvoiceId,
-        jasa_order_id: Number(jasa_order_id),
+        jasa_order_id: invoiceOrderId,
         amount: numericAmount,
         description,
         status: 'pending',
@@ -73,23 +103,26 @@ export async function POST(request: Request) {
 
     // 3. BLAST EMAIL: Kirim notifikasi tagihan baru ke email klien
     try {
-      await sendUserInvoiceNotificationEmail({
-        customerName: customer_name,
-        customerEmail: customer_email,
-        projectTitle: project_title || 'Custom Audio Production',
-        invoiceId: uniqueInvoiceId,
-        termDescription: description,
-        amount: numericAmount,
-        paymentUrl: `https://checkout.sandbox.midtrans.com/v1/payment-redirect/${transaction.token}`
-      });
-      console.log(`Email notification successfully dispatched to ${customer_email}`);
+      if (customer_name && customer_email) {
+        await sendUserInvoiceNotificationEmail({
+          customerName: customer_name,
+          customerEmail: customer_email,
+          projectTitle: project_title || 'Custom Audio Production',
+          invoiceId: uniqueInvoiceId,
+          termDescription: description || 'Payment invoice',
+          amount: numericAmount,
+          paymentUrl: `https://checkout.sandbox.midtrans.com/v1/payment-redirect/${transaction.token}`
+        });
+        console.log(`Email notification successfully dispatched to ${customer_email}`);
+      }
     } catch (emailErr) {
       console.error("SMTP Alert email failed to dispatch but invoice database is locked:", emailErr);
     }
 
     return NextResponse.json({ success: true, mode: 'create', data });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('Invoicing processor engine crash:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: message || 'Internal Server Error' }, { status: 500 });
   }
 }
