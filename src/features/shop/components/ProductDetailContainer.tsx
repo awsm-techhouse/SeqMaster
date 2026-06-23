@@ -11,7 +11,7 @@ interface Product {
   title: string;
   artist_name: string;
   bpm: number;
-  genre: string;
+  genre: string | string[]; // PERBAIKAN TIPE DATA: Menerima string tunggal atau array string dari Supabase
   price: number;
   discount_percent: number;
   preview_url: string;
@@ -87,7 +87,7 @@ export default function ProductDetailContainer({ product }: { product: Product }
         <div className="space-y-6">
           <header className="space-y-1">
             <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest text-zinc-500 select-none">
-              <Cpu size={12} className="text-emerald-400" /> Architectural ID // <span className="text-zinc-400 select-all">{product.id}</span>
+              <Cpu size={12} className="text-emerald-400" />ID // <span className="text-zinc-400 select-all">{product.id}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-zinc-100">
               {product.title}
@@ -100,15 +100,16 @@ export default function ProductDetailContainer({ product }: { product: Product }
           {/* GRID MANIFES SPESIFIKASI MONOSPACED */}
           <div className="grid grid-cols-2 gap-4 border-y border-zinc-900/80 py-6 text-xs font-mono select-none">
             <div className="space-y-1 p-4 bg-zinc-950/40 border border-zinc-900/60 rounded-xl">
-              <span className="text-zinc-600 text-[10px] uppercase tracking-wider block">Pulse Quantization</span>
+              <span className="text-zinc-600 text-[10px] uppercase tracking-wider block">Tempo</span>
               <span className="text-zinc-200 font-bold text-sm flex items-center gap-1.5">
                 <Activity size={12} className="text-emerald-500" /> {product.bpm} BPM
               </span>
             </div>
             <div className="space-y-1 p-4 bg-zinc-950/40 border border-zinc-800/10 rounded-xl">
-              <span className="text-zinc-600 text-[10px] uppercase tracking-wider block">Classification Map</span>
-              <span className="text-emerald-400 font-bold text-xs uppercase block truncate pt-0.5">
-                {product.genre}
+              <span className="text-zinc-600 text-[10px] uppercase tracking-wider block">Genre</span>
+              <span className="text-emerald-400 font-bold text-xs uppercase block truncate pt-0.5" title={Array.isArray(product.genre) ? product.genre.join(', ') : product.genre}>
+                {/* FIX UTAMA: Melakukan join array string secara eksplisit dengan pemisah koma dan spasi */}
+                {Array.isArray(product.genre) ? product.genre.join(', ') : product.genre}
               </span>
             </div>
           </div>
@@ -117,7 +118,7 @@ export default function ProductDetailContainer({ product }: { product: Product }
         {/* BARIS TATA LETAK HARGA & PEMUTUS AKSI CHECKOUT */}
         <div className="mt-8 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-0.5 select-none">
-            <span className="text-[10px] text-zinc-500 font-mono block uppercase tracking-widest">Asset Liquidation Value</span>
+            <span className="text-[10px] text-zinc-500 font-mono block uppercase tracking-widest">Price</span>
             <div className="flex items-baseline gap-2.5 flex-wrap">
               <span className="font-mono text-emerald-400 font-bold text-xl">
                 IDR {Math.round(finalPrice).toLocaleString('id-ID')}

@@ -91,13 +91,13 @@ export default function ShopCatalogContainer({ items }: { items: Product[] }) {
 
                   <div className="space-y-1.5 border-y border-zinc-900/80 py-2.5 my-3 text-[11px]">
                     <div className="flex justify-between">
-                      <span className="text-zinc-500 uppercase tracking-wider text-[9px]">Pulse Core</span>
+                      <span className="text-zinc-500 uppercase tracking-wider text-[9px]">BPM</span>
                       <span className="font-mono text-zinc-300 font-bold">{product.bpm} BPM</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500 uppercase tracking-wider text-[9px]">Genre</span>
                       <span className="font-mono text-zinc-400 uppercase text-[9px] truncate max-w-[100px]">
-                        {product.genre}
+                        {Array.isArray(product.genre) ? product.genre.join(', ') : product.genre}
                       </span>
                     </div>
                   </div>
