@@ -78,7 +78,7 @@ export default function AdminConsolePage() {
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // Mengambil data secara dinamis dari environment variable Vercel
-    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
+    if (password === process.env.ADMIN_PASSWORD) {
       localStorage.setItem('seq_admin_session', 'true');
       localStorage.setItem('seq_admin_expiry', String(Date.now() + 3600000));
       setIsAuthenticated(true);
