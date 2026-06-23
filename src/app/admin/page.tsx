@@ -253,7 +253,7 @@ export default function AdminConsolePage() {
         .from('jasa_invoices')
         .select('id')
         .eq('jasa_order_id', orderId)
-        .neq('status', 'settlement')
+        .eq('status', 'pending')
         .limit(1);
 
       if (invErr) {
@@ -262,7 +262,7 @@ export default function AdminConsolePage() {
       }
 
       if (openInvs && openInvs.length > 0) {
-        alert('Tidak dapat menyelesaikan proyek: masih ada invoice aktif yang belum dibayar. Selesaikan invoice terlebih dahulu.');
+        alert('Tidak dapat menyelesaikan proyek: masih ada invoice berstatus pending yang belum dibayar. Selesaikan invoice pending terlebih dahulu.');
         return;
       }
 
