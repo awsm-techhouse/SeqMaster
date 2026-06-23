@@ -67,11 +67,17 @@ export default function ServicesPage() {
           body: JSON.stringify(payload)
         });
         
-        if (res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Invalid JSON response from server' }));
+
+        if (res.ok && data.success) {
           alert('Brief Berhasil Dikirim! Manajemen operasional SeqMaster akan memvalidasi rincian harga kustom via WhatsApp.');
           setTitle(''); setRefUrl(''); setStemsUrl(''); setNotes(''); setName(''); setEmail(''); setWhatsapp('');
           if (audioObj) audioObj.pause();
           setIsPlayingDemo(false);
+        } else {
+          const errorMessage = (data && (data.error || data.message)) || `Response failed with status ${res.status}`;
+          console.error('Service submission failed:', errorMessage, data);
+          alert(`Gagal mengirim brief:\n${errorMessage}`);
         }
       } catch (err) {
         console.error('Relational transmission error:', err);
