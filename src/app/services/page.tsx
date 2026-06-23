@@ -68,6 +68,8 @@ export default function ServicesPage() {
         });
         
         const data = await res.json().catch(() => ({ error: 'Invalid JSON response from server' }));
+        const rawError = data && (data.error || data.message);
+        const errorMessage = typeof rawError === 'object' ? JSON.stringify(rawError) : rawError;
 
         if (res.ok && data.success) {
           alert('Brief Berhasil Dikirim! Manajemen operasional SeqMaster akan memvalidasi rincian harga kustom via WhatsApp.');
@@ -75,9 +77,9 @@ export default function ServicesPage() {
           if (audioObj) audioObj.pause();
           setIsPlayingDemo(false);
         } else {
-          const errorMessage = (data && (data.error || data.message)) || `Response failed with status ${res.status}`;
-          console.error('Service submission failed:', errorMessage, data);
-          alert(`Gagal mengirim brief:\n${errorMessage}`);
+          const finalErrorMessage = errorMessage || `Response failed with status ${res.status}`;
+          console.error('Service submission failed:', finalErrorMessage, data);
+          alert(`Gagal mengirim brief:\n${finalErrorMessage}`);
         }
       } catch (err) {
         console.error('Relational transmission error:', err);
