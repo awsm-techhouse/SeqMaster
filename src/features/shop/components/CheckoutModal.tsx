@@ -24,7 +24,8 @@ export default function CheckoutModal({ product, onClose }: { product: any; onCl
             customer_name: name, 
             customer_email: email, 
             whatsapp_number: whatsapp, 
-            amount: product.price 
+            // FIX UTAMA: Membulatkan harga secara mutlak menjadi bilangan bulat tanpa pecahan desimal (sen)
+            amount: Math.round(product.price) 
           })
         });
 
@@ -63,7 +64,7 @@ export default function CheckoutModal({ product, onClose }: { product: any; onCl
         </div>
 
         <h3 className="text-base font-black tracking-tight uppercase text-zinc-100 mb-1 select-none">Secure Terminal Checkout</h3>
-        <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-6">{product.title} // Matrix Asset Node</p>
+        <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-6">{product.title} // {product.artist_name}</p>
 
         <form onSubmit={handleCheckoutInit} className="space-y-5 text-sm">
           <div>

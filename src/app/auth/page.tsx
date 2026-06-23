@@ -148,7 +148,7 @@ function AuthPortalContent() {
 
         <div className="pt-2">
           <Button type="submit" disabled={loading} className="!py-3 text-[10px] tracking-widest font-black uppercase">
-            {loading ? 'Registering...' : isLoginView ? 'Sign In' : 'Create Account'}
+            {loading ? 'Processing...' : isLoginView ? 'Sign In' : 'Create Account'}
           </Button>
         </div>
       </form>
