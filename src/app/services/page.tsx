@@ -277,7 +277,7 @@ export default function ServicesPage() {
             <div className="pt-2">
               <Button type="submit" disabled={isPending}>
                 <Layers size={14} /> 
-                {isPending ? 'Transmitting Data Array...' : `Submit ${activeTab === 'sequencer' ? 'Custom Sequencer' : activeTab} Brief`}
+                {isPending ? 'Transmitting...' : `Submit ${activeTab === 'sequencer' ? 'Custom Sequencer' : activeTab} Brief`}
               </Button>
             </div>
           </form>

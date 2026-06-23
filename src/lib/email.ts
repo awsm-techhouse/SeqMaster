@@ -168,7 +168,7 @@ export async function sendUserInvoiceNotificationEmail(payload: UserInvoiceAlert
       <p style="font-size: 12px; color: #71717a; line-height: 1.5;">Anda dapat melunasi tagihan ini langsung melalui halaman Dashboard akun Anda atau mengklik tautan gerbang pembayaran Midtrans aman di bawah ini:</p>
 
       <div style="margin-top: 25px; text-align: center;">
-        <a href="${paymentUrl}" style="display: block; background-color: #fbbf24; color: #09090b; font-weight: bold; text-decoration: none; padding: 14px; border-radius: 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);">Bayar Tagihan Sekarang</a>
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')}/dashboard" style="display: block; background-color: #fbbf24; color: #09090b; font-weight: bold; text-decoration: none; padding: 14px; border-radius: 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);">Bayar Tagihan Sekarang</a>
       </div>
     </div>
   `;
