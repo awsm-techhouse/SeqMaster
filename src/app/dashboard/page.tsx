@@ -100,7 +100,7 @@ export default function UserDashboard() {
   const handleSecureVaultDownload = async (orderId: string) => {
     setDownloadTargetId(orderId);
     try {
-      const response = await fetch('/api/checkout/download', {
+      const response = await fetch('/api/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId })
