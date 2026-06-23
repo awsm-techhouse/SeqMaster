@@ -2,6 +2,7 @@ import React from 'react';
 import { AudioPlayerProvider } from '@/context/AudioPlayerContext';
 import Header from '@/components/ui/Header';
 import '@/app/globals.css';
+import { midtransSnapScriptUrl } from '@/lib/midtrans';
 
 export const metadata = {
   title: 'SeqMaster Hub - Premium Audio Architecture',
@@ -12,9 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="id" className="bg-zinc-950 text-zinc-50 antialiased" suppressHydrationWarning>
       <head>
-        {/* Menyisipkan CDN skrip resmi Midtrans Snap Sandbox global */}
+        {/* Menyisipkan CDN skrip resmi Midtrans Snap global berdasarkan env */}
         <script 
-          src="https://app.sandbox.midtrans.com/snap/snap.js" 
+          src={midtransSnapScriptUrl}
           data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY} 
           defer 
         />

@@ -564,7 +564,14 @@ export default function AdminConsolePage() {
                   <div className="space-y-3 lg:col-span-1">
                     <span className="block text-[10px] font-mono text-zinc-400 uppercase tracking-wider mb-2 border-b border-zinc-900 pb-1.5">➕ Issue New Payment Milestone</span>
 
-                    {order.jasa_invoices && order.jasa_invoices.some((inv: any) => inv.status === 'pending') ? (
+                    {order.status !== 'pending' ? (
+                      <div className="space-y-2 p-4 bg-emerald-950/40 border border-emerald-900 rounded-3xl text-zinc-200 text-[10px] font-mono">
+                        <p className="font-bold uppercase tracking-wider">Proyek telah selesai</p>
+                        <p className="leading-relaxed text-zinc-400">
+                          Status order ini sudah selesai. Tidak dapat menerbitkan invoice baru lagi.
+                        </p>
+                      </div>
+                    ) : order.jasa_invoices && order.jasa_invoices.some((inv: any) => inv.status === 'pending') ? (
                       <div className="space-y-2 p-4 bg-rose-950/60 border border-rose-900 rounded-3xl text-zinc-200 text-[10px] font-mono">
                         <p className="font-bold uppercase tracking-wider">Invoice aktif belum selesai</p>
                         <p className="leading-relaxed text-zinc-400">

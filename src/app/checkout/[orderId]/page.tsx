@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2Client, BUCKET_NAME } from '@/lib/r2';
+import { midtransStatusApiUrl } from '@/lib/midtrans';
 import { ShieldCheck, ArrowRight, CheckCircle2, FileX, Download, Disc, UserPlus } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +25,7 @@ async function checkLiveMidtransStatus(orderId: string): Promise<string> {
     const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
     const base64Auth = Buffer.from(`${serverKey}:`).toString('base64');
     
-    const response = await fetch(`https://api.sandbox.midtrans.com/v2/${orderId}/status`, {
+    const response = await fetch(midtransStatusApiUrl(orderId), {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${base64Auth}`,

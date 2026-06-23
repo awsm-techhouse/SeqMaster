@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { Snap } from 'midtrans-client';
+import { midtransSnapConfig } from '@/lib/midtrans';
 
-const snap = new Snap({
-  isProduction: false,
-  serverKey: process.env.MIDTRANS_SERVER_KEY || '',
-  clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ''
-});
+const snap = new Snap(midtransSnapConfig);
 
 export async function POST(request: Request) {
   try {

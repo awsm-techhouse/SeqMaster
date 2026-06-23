@@ -2,12 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendUserInvoiceNotificationEmail } from '@/lib/email';
 import { Snap } from 'midtrans-client';
+import { midtransPaymentRedirectUrl, midtransSnapConfig } from '@/lib/midtrans';
 
-const snap = new Snap({
-  isProduction: false,
-  serverKey: process.env.MIDTRANS_SERVER_KEY || '',
-  clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ''
-});
+const snap = new Snap(midtransSnapConfig);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -123,7 +120,7 @@ export async function POST(request: Request) {
           invoiceId: uniqueInvoiceId,
           termDescription: description || 'Payment invoice',
           amount: numericAmount,
-          paymentUrl: `https://checkout.sandbox.midtrans.com/v1/payment-redirect/${transaction.token}`
+          paymentUrl: midtransPaymentRedirectUrl(transaction.token)
         });
         console.log(`Email notification successfully dispatched to ${customer_email}`);
       }
