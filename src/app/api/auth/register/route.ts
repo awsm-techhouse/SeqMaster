@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     let activationLink = linkData.properties?.action_link || '';
-    const productionDomain = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://seq-master.vercel.app';
+    const productionDomain = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://seqmaster.store';
     
     // Perbaikan Paksa Localhost Trap
     if (activationLink.includes('http://localhost:3000')) {
