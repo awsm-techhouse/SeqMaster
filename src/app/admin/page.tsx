@@ -202,7 +202,7 @@ export default function AdminConsolePage() {
           discount_percent: Number(discount),
           preview_url: previewUrl,
           master_file_key: masterFileKey,
-          is_active: true // Pastikan status aktif terkirim ke database
+          // NOTE: Do not include `is_active` here to avoid schema errors if column missing
         };
         if (editingId) {
           const { error } = await supabase.from('products').update(productPayload).eq('id', editingId);

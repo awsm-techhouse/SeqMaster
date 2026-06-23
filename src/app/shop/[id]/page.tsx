@@ -7,18 +7,31 @@ import { ArrowLeft } from 'lucide-react';
 export const dynamic = 'force-dynamic'; // Melewati caching agar pembacaan diskon selalu real-time
 
 async function getSingleSequencerData(id: string) {
-  const { data, error } = await supabase
-    .from('products')
-    .select('id, title, artist_name, bpm, genre, price, discount_percent, preview_url')
-    .eq('id', id)
-    .eq('is_active', true)
-    .single();
+  // Attempt to enforce `is_active` filter; if the column is missing, fall back
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, title, artist_name, bpm, genre, price, discount_percent, preview_url')
+      .eq('id', id)
+      .eq('is_active', true)
+      .single();
 
-  if (error) {
-    console.error('Failure tracking deep link record identifier:', error);
-    return null;
+    if (error) throw error;
+    return data;
+  } catch (err: any) {
+    console.warn('is_active filter failed for product detail, falling back:', err.message || err);
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, title, artist_name, bpm, genre, price, discount_percent, preview_url')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Failure tracking deep link record identifier (unfiltered):', error);
+      return null;
+    }
+    return data;
   }
-  return data;
 }
 
 interface PageProps {

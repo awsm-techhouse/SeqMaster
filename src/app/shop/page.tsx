@@ -8,16 +8,28 @@ import { Sliders } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 async function getAllActiveProducts() {
-  const { data, error } = await supabase
-    .from('products')
-    .select('id, title, artist_name, bpm, genre, price, discount_percent, preview_url')
-    .eq('is_active', true);
+  // Try with `is_active` filter; if the column doesn't exist in the DB schema,
+  // fall back to returning all products to avoid crashing the page.
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, title, artist_name, bpm, genre, price, discount_percent, preview_url')
+      .eq('is_active', true);
 
-  if (error) {
-    console.error('Error fetching data from products ledger:', error);
-    return [];
+    if (error) throw error;
+    return data || [];
+  } catch (err: any) {
+    console.warn('is_active filter failed, falling back to unfiltered products:', err.message || err);
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, title, artist_name, bpm, genre, price, discount_percent, preview_url');
+
+    if (error) {
+      console.error('Error fetching data from products ledger (unfiltered):', error);
+      return [];
+    }
+    return data || [];
   }
-  return data || [];
 }
 
 export default async function ShopCatalogPage() {
