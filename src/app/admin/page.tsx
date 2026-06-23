@@ -536,45 +536,25 @@ export default function AdminConsolePage() {
                     ) : (
                       <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
                         {order.jasa_invoices.map((inv: any) => (
-                          <form key={inv.id} onSubmit={async (e) => {
-                            e.preventDefault();
-                            const f = e.currentTarget;
-                            const amt = (f.elements.namedItem('edit_amt') as HTMLInputElement).value;
-                            const dsc = (f.elements.namedItem('edit_dsc') as HTMLInputElement).value;
-                            try {
-                              const res = await fetch('/api/admin/services/invoice', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  invoice_id: inv.id,
-                                  amount: Number(amt.replace(/[^0-9]/g, '')),
-                                  description: dsc
-                                })
-                              });
-                              if (!res.ok) throw new Error('Gagal merubah data.');
-                              alert('Termin Invoice Berhasil Diperbarui!');
-                              fetchRealTimeRecords();
-                            } catch (err: any) { alert(err.message); }
-                          }} className="bg-zinc-950 border border-zinc-900 rounded-xl p-3 space-y-2 text-left">
+                          <div key={inv.id} className="bg-zinc-950 border border-zinc-900 rounded-xl p-3 space-y-2 text-left">
                             <div className="flex justify-between items-center border-b border-zinc-900 pb-1 mb-1">
                               <span className="text-[9px] font-mono text-zinc-500 uppercase">INV: {inv.id}</span>
-                              <span className={`px-1.5 py-0.2 font-mono text-[8px] font-black rounded border uppercase ${inv.status === 'settlement' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'}`}>
+                              <span className={`px-1.5 py-0.2 font-mono text-[8px] font-black rounded border uppercase ${inv.status === 'settlement' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : inv.status === 'expired' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'}`}>
                                 {inv.status === 'settlement' ? 'Lunas' : inv.status}
                               </span>
                             </div>
-                            <input type="text" name="edit_dsc" required defaultValue={inv.description} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] text-zinc-100 uppercase" disabled={inv.status === 'settlement'} />
-                            <div className="flex flex-wrap gap-2">
-                              <input type="text" name="edit_amt" required defaultValue={Number(inv.amount).toLocaleString('id-ID')} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-[11px] font-mono text-emerald-400 font-bold" onChange={(e) => e.target.value = formatInputToRupiah(e.target.value)} disabled={inv.status === 'settlement'} />
-                              {inv.status !== 'settlement' && (
-                                <button type="submit" className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 text-[9px] font-black uppercase px-2 rounded-lg transition">Save</button>
-                              )}
-                              {inv.status !== 'settlement' && (
-                                <button type="button" onClick={() => handleCancelInvoice(inv.id)} disabled={cancelingInvoiceId === inv.id} className="bg-rose-500 text-zinc-950 hover:bg-rose-400 text-[9px] font-black uppercase px-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                  {cancelingInvoiceId === inv.id ? 'Membatalkan...' : 'Cancel Payment'}
-                                </button>
-                              )}
+                            <div className="text-[11px]">
+                              <div className="font-bold text-zinc-200 uppercase">{inv.description}</div>
+                              <div className="flex items-center gap-3 mt-2">
+                                <div className="text-emerald-400 font-mono font-bold">IDR {Number(inv.amount).toLocaleString('id-ID')}</div>
+                                {inv.status !== 'settlement' && (
+                                  <button type="button" onClick={() => handleCancelInvoice(inv.id)} disabled={cancelingInvoiceId === inv.id} className="bg-rose-500 text-zinc-950 hover:bg-rose-400 text-[9px] font-black uppercase px-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {cancelingInvoiceId === inv.id ? 'Membatalkan...' : 'Cancel Payment'}
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </form>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -584,7 +564,7 @@ export default function AdminConsolePage() {
                   <div className="space-y-3 lg:col-span-1">
                     <span className="block text-[10px] font-mono text-zinc-400 uppercase tracking-wider mb-2 border-b border-zinc-900 pb-1.5">➕ Issue New Payment Milestone</span>
 
-                    {order.jasa_invoices && order.jasa_invoices.some((inv: any) => inv.status !== 'settlement') ? (
+                    {order.jasa_invoices && order.jasa_invoices.some((inv: any) => inv.status === 'pending') ? (
                       <div className="space-y-2 p-4 bg-rose-950/60 border border-rose-900 rounded-3xl text-zinc-200 text-[10px] font-mono">
                         <p className="font-bold uppercase tracking-wider">Invoice aktif belum selesai</p>
                         <p className="leading-relaxed text-zinc-400">
@@ -638,7 +618,7 @@ export default function AdminConsolePage() {
                       </form>
                     )}
 
-                    {order.status === 'pending' && !(order.jasa_invoices && order.jasa_invoices.some((inv: any) => inv.status !== 'settlement')) && (
+                    {order.status === 'pending' && !(order.jasa_invoices && order.jasa_invoices.some((inv: any) => inv.status === 'pending')) && (
                       <div className="pt-3 border-t border-zinc-900 mt-2">
                         <button onClick={() => handleFinishJasaOrder(order.id)} className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-zinc-100 font-bold py-2.5 rounded-xl text-[10px] uppercase tracking-wider transition">Selesaikan Kontrak (Finish)</button>
                       </div>
