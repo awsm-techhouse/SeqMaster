@@ -11,10 +11,10 @@ interface ProductCardButtonProps {
     preview_url?: string | null;
     [key: string]: unknown; // Allow other properties to be passed through
   };
-  onBuyClick?: () => void; // Dibuat opsional karena fungsi dialihkan ke halaman rute dinamis internal
+  owned?: boolean;
 }
 
-export default function ProductCardButton({ product, onBuyClick }: ProductCardButtonProps) {
+export default function ProductCardButton({ product, owned = false }: ProductCardButtonProps) {
   const { activeTrackId, isPlaying, triggerPlayback } = useAudioSystem();
   const currentIsPlaying = activeTrackId === String(product.id) && isPlaying;
 
@@ -42,14 +42,12 @@ export default function ProductCardButton({ product, onBuyClick }: ProductCardBu
         <span className="text-[10px] tracking-wider">{currentIsPlaying ? 'Stop Preview' : 'Play Preview'}</span>
       </Button>
 
-      {onBuyClick ? (
-        <button
-          type="button"
-          onClick={onBuyClick}
-          className="w-full bg-emerald-500 text-zinc-950 hover:bg-emerald-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-wider transition active:scale-[0.98]"
-        >
-          <CreditCard size={14} className="inline mr-1" /> Beli Sekarang
-        </button>
+      {owned ? (
+        <a href={`/shop/${product.id}`} className="block w-full">
+          <Button variant="secondary" className="!py-2.5 text-[10px] tracking-wider opacity-90 cursor-pointer">
+            <CreditCard size={14} className="inline mr-1" /> Owned
+          </Button>
+        </a>
       ) : (
         <a href={`/shop/${product.id}`} className="block w-full">
           <Button variant="primary" className="!py-2.5 text-[10px] tracking-wider">

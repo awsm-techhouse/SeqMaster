@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProductCardButton from '@/features/shop/components/ProductCardButton';
-import CheckoutModal from '@/features/shop/components/CheckoutModal';
+import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/LayoutPrimitives';
 import { Search, Music, Tag } from 'lucide-react';
 
@@ -19,9 +19,30 @@ interface Product {
 
 export default function ShopCatalogContainer({ items }: { items: Product[] }) {
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Mengelola produk terpilih yang akan dibeli langsung di level atas container (State Lifting)
-  const [selectedProductForCheckout, setSelectedProductForCheckout] = useState<Product | null>(null);
+  const [ownedProductIds, setOwnedProductIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadOwnedProducts = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData.session;
+      if (!session?.user?.email) return;
+
+      const { data: ownedOrders, error } = await supabase
+        .from('orders')
+        .select('product_id')
+        .eq('customer_email', session.user.email)
+        .eq('status', 'settlement');
+
+      if (error) {
+        console.error('Failed to load owned products:', error);
+        return;
+      }
+
+      setOwnedProductIds((ownedOrders || []).map((order: any) => String(order.product_id)));
+    };
+
+    loadOwnedProducts();
+  }, []);
 
   const filteredProducts = items.filter((product) => {
     const titleMatch = product.title?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -120,7 +141,7 @@ export default function ShopCatalogContainer({ items }: { items: Product[] }) {
                   
                   <ProductCardButton 
                     product={{ ...product, price: finalPrice }} 
-                    onBuyClick={() => setSelectedProductForCheckout({ ...product, price: finalPrice })}
+                    owned={ownedProductIds.includes(String(product.id))}
                   />
                 </div>
               </article>
@@ -129,13 +150,6 @@ export default function ShopCatalogContainer({ items }: { items: Product[] }) {
         </div>
       )}
 
-      {/* Modal checkout diletakkan mandiri di luar perulangan grid array */}
-      {selectedProductForCheckout && (
-        <CheckoutModal 
-          product={selectedProductForCheckout} 
-          onClose={() => setSelectedProductForCheckout(null)} 
-        />
-      )}
     </div>
   );
 }

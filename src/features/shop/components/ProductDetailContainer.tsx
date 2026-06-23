@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/LayoutPrimitives';
 import CheckoutModal from '@/features/shop/components/CheckoutModal';
 import { useAudioSystem } from '@/context/AudioPlayerContext';
+import { supabase } from '@/lib/supabase';
 import { Music, Play, Pause, CreditCard, Cpu, Activity, Disc } from 'lucide-react';
 
 interface Product {
@@ -19,6 +20,7 @@ interface Product {
 
 export default function ProductDetailContainer({ product }: { product: Product }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [isOwned, setIsOwned] = useState(false);
   const { activeTrackId, isPlaying, triggerPlayback } = useAudioSystem();
   
   const currentIsPlaying = activeTrackId === product.id && isPlaying;
@@ -27,6 +29,35 @@ export default function ProductDetailContainer({ product }: { product: Product }
   const finalPrice = hasDiscount 
     ? product.price * (1 - product.discount_percent / 100) 
     : product.price;
+
+  useEffect(() => {
+    const checkOwnership = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const session = sessionData.session;
+        if (!session?.user?.email) return;
+
+        const { data: ownedOrders, error } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('product_id', product.id)
+          .eq('customer_email', session.user.email)
+          .eq('status', 'settlement')
+          .limit(1);
+
+        if (error) {
+          console.error('Failed to check product ownership:', error);
+          return;
+        }
+
+        setIsOwned(Array.isArray(ownedOrders) && ownedOrders.length > 0);
+      } catch (err) {
+        console.error('Ownership check failed:', err);
+      }
+    };
+
+    checkOwnership();
+  }, [product.id]);
 
   const resolveAudioPlaybackUrl = () => {
     if (!product.preview_url) return '#';
@@ -132,13 +163,23 @@ export default function ProductDetailContainer({ product }: { product: Product }
           </div>
 
           <div className="sm:w-56">
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-black py-4 rounded-xl text-xs uppercase tracking-widest transition active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl shadow-black/40 select-none"
-            >
-              <CreditCard size={14} /> Beli sekarang
-            </button>
+            {isOwned ? (
+              <button
+                type="button"
+                disabled
+                className="w-full bg-zinc-800 text-zinc-500 cursor-not-allowed font-black py-4 rounded-xl text-xs uppercase tracking-widest transition flex items-center justify-center gap-2 shadow-inner"
+              >
+                <CreditCard size={14} /> Already Owned
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-black py-4 rounded-xl text-xs uppercase tracking-widest transition active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl shadow-black/40 select-none"
+              >
+                <CreditCard size={14} /> Beli sekarang
+              </button>
+            )}
           </div>
         </div>
 

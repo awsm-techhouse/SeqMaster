@@ -10,14 +10,28 @@ export async function POST(request: Request) {
     const { product_id, customer_name, customer_email, whatsapp_number, amount, user_id } = await request.json();
     const uniqueOrderId = `SEQ-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // 1. Inisialisasi token transaksi ke Midtrans Server
+    // 1. Cek apakah item ini sudah dimiliki oleh email yang sama
+    const { data: duplicateOrder, error: duplicateError } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('product_id', product_id)
+      .eq('customer_email', customer_email)
+      .eq('status', 'settlement')
+      .limit(1);
+
+    if (duplicateError) throw duplicateError;
+    if (duplicateOrder && duplicateOrder.length > 0) {
+      return NextResponse.json({ error: 'Anda sudah memiliki item ini. Silakan cek dashboard Anda.' }, { status: 400 });
+    }
+
+    // 2. Inisialisasi token transaksi ke Midtrans Server
     const parameter = {
       transaction_details: { order_id: uniqueOrderId, gross_amount: amount },
       customer_details: { first_name: customer_name, email: customer_email, phone: whatsapp_number }
     };
+
     const transaction = await snap.createTransaction(parameter);
 
-    // 2. Deteksi status email pelanggan lama/baru
     const { data: existingUserOrder } = await supabase
       .from('orders')
       .select('id')
