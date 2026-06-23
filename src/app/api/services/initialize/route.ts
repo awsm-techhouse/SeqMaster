@@ -37,7 +37,6 @@ export async function POST(request: Request) {
         customer_name,
         customer_email,
         whatsapp_number,
-        price: 0,
         status: 'pending'
       }])
       .select()
