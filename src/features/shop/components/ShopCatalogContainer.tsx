@@ -23,10 +23,15 @@ export default function ShopCatalogContainer({ items }: { items: Product[] }) {
   // Mengelola produk terpilih yang akan dibeli langsung di level atas container (State Lifting)
   const [selectedProductForCheckout, setSelectedProductForCheckout] = useState<Product | null>(null);
 
-  const filteredProducts = items.filter(product => {
+  const filteredProducts = items.filter((product) => {
     const titleMatch = product.title?.toLowerCase().includes(searchQuery.toLowerCase());
     const artistMatch = product.artist_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const genreMatch = product.genre?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Memastikan komparasi array genre aman dari error tipe data
+    const genreMatch = Array.isArray(product.genre)
+      ? product.genre.join(' ').toLowerCase().includes(searchQuery.toLowerCase())
+      : false;
+
     return titleMatch || artistMatch || genreMatch;
   });
 
