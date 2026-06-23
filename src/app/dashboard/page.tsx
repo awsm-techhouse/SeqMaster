@@ -144,7 +144,7 @@ export default function UserDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/60 pb-5 text-left relative z-20">
         <div>
           <h1 className="text-lg font-black tracking-tight uppercase text-zinc-100 flex items-center gap-2">
-            <Terminal className="text-emerald-400" size={16} /> Musician Dashboard Node
+            <Terminal className="text-emerald-400" size={16} /> My Dashboard
           </h1>
           <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5 select-none">
             Welcome back, <span className="text-zinc-300 font-bold">{userSession?.email || 'Authenticated User'}</span>
@@ -230,10 +230,10 @@ export default function UserDashboard() {
 
       {/* SEKSI A: REPOSITORI PRODUK TOKO YANG DIBELI LUNAS */}
       <div className="space-y-4 text-left">
-        <h2 className="text-xs font-mono text-zinc-500 uppercase tracking-widest select-none">Vault Master Repositories</h2>
+        <h2 className="text-xs font-mono text-zinc-500 uppercase tracking-widest select-none">Sequencer Collections</h2>
         {purchasedItems.length === 0 ? (
           <div className="bg-zinc-900/20 border border-zinc-800/40 rounded-2xl p-6 text-center">
-            <p className="text-zinc-500 text-xs font-mono uppercase">Katalog unduhan kosong. Selesaikan checkout ritel untuk membuka lisensi.</p>
+            <p className="text-zinc-500 text-xs font-mono uppercase">Katalog unduhan kosong. Silahkan beli pada Sequencer Shop.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -257,7 +257,7 @@ export default function UserDashboard() {
 
       {/* SEKSI B: DAFTAR PANTAU RIWAYAT PROYEK JASA AUDIO KUSTOM */}
       <div className="space-y-4 text-left">
-        <h2 className="text-xs font-mono text-zinc-500 uppercase tracking-widest select-none">Custom Production Pipeline Requests</h2>
+        <h2 className="text-xs font-mono text-zinc-500 uppercase tracking-widest select-none">Custom Production Requests</h2>
         {customServices.length === 0 ? (
           <div className="bg-zinc-900/20 border border-zinc-800/40 rounded-2xl p-6 text-center">
             <p className="text-zinc-500 text-xs font-mono uppercase">Tidak ada riwayat pengerjaan jasa audio aktif.</p>
